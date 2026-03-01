@@ -1,0 +1,287 @@
+/* -----------------------------------------------------------------------------
+
+   I'm using `DavidAnson/markdownlint-cli2` as my NeoVim tool for markdown file linting & formatting.
+   If present in the current folder, this file `.markdownlint-cli2.jsonc` will be used
+   to ignore or modify default rules used by markdownlint-cli2.
+
+   Equivalent Configuration
+     Equivalent configuration for embedded formatting of markdownlint rules. Place this at the top of your markdown file:
+
+         <!-- markdownlint-configure-file { "default": "true" } -->
+         <!-- markdownlint-configure-file { "ul-indent": { "indent": 4, "start_indented": false, "start_indent": 4, } } -->
+         <!-- markdownlint-configure-file { "line-length": { "line_length": 300 } } -->
+         <!-- markdownlint-configure-file { "blanks-around-headings": { "lines_above": 2, "lines_below": 0, } } -->
+         <!-- markdownlint-configure-file { "hr-style": { "style": "---------------", } } -->
+         <!-- markdownlint-disable MD001 MD012 MD033 MDO40 MD041 MD045 MDO48 -->
+         <!-- see [Markdownlint Documentation](https://docs.superoffice.com/contribute/markdown-guide/markdownlint.html) -->
+         <!-- see [Markdownlint Schema](https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.jsonc) -->
+
+   What's the difference between json and jsonc?
+     jsonc is a simplified json format which allows comments and unquoted values
+     delimited by whitespace. A jsonc formatted file can be unambiguously transformed to a json file
+     by stripping out comments and adding quotes. Any valid json is also a valid jsonc.
+
+   Sources:
+     [GitHub: mfussenegger/nvim-lint](https://github.com/mfussenegger/nvim-lint/)
+     [Available Linters in nvim-lint](https://github.com/mfussenegger/nvim-lint/?tab=readme-ov-file#available-linters)
+     [GitHub: DavidAnson/markdownlint](https://github.com/DavidAnson/markdownlint/)
+     [markdownlint Rules](https://github.com/DavidAnson/markdownlint/tree/v0.34.0/doc)
+     [Default values for .markdownlint-cli2.jsonc](https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.yaml)
+     [markdownlint: A Node.js style checker and lint tool for Markdown/CommonMark files](https://www.npmjs.com/package/markdownlint)
+     [Markdownlint Documentation](https://docs.superoffice.com/contribute/markdown-guide/markdownlint.html)
+     [Markdownlint Detail Rule Discription](https://www.npmjs.com/package/markdownlint-cli)
+     [Markdownlint Schema](https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.jsonc)-
+
+----------------------------------------------------------------------------- */
+{
+  // Specify the files to lint
+  "globs": [
+    "**/*.md"
+  ],
+  // Define rule configurations
+  "config": {
+    "default": true, // default is true, enable all default rules/assets
+    // Rule MD012 - Multiple consecutive blank lines
+    "MD012": false, // default is true, no multiple consecutive blank lines : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md012.md
+    // Rule MD013 - Maximum line length
+    "MD013": {
+      "line_length": 300, // default is 80
+      "ignore_code_blocks": true,
+      "tables": true
+    },
+    // Rule MD022 - Headings should be surrounded by blank lines
+    "MD022": false,
+    // Rule MD024 - No multiple headings with the same content
+    "MD024": false,
+    // Rule MD032 - Lists should be surrounded by blank lines
+    "MD032": false,
+    // Rule MD033 - Inline HTML
+    "MD033": false, // default is true, Inline HTML : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md033.md
+    // Rule MD041 - First line in file should be a top-level heading
+    "MD041": false, // default is true, first line in a file should be a top-level heading : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md041.md
+    // Rule MD045 - Images should have alternate text (alt text)
+    "MD045": false, // default is true, images should have alternate text (alt text) : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md045.md
+    // Rule MD048 - Code fence style
+    // Options: "consistent", "backtick", "tilde"
+    "MD048": {
+      "style": "consistent"
+    },
+  },
+  // Paths to ignore
+  "ignores": [
+    "node_modules",
+    "dist",
+    "build"
+  ],
+  // Fix mode (set to true to auto-fix issues)
+  "fix": true
+}
+// {
+//   // Specify the files to lint
+//   "globs": [
+//      "**/*.md"
+//   ],
+//   // Define rule configurations
+//   "config": {
+//     "default": true, // default is true, enable all default rules
+// 
+//     // Rule MD001 - Heading levels should only increment by one level at a time
+//     // "MD001": false, // default is true, heading levels should only increment by one level at a time : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md001.md
+// 
+//     // Rule MD002 - First heading should be a top-level heading
+//     "MD002": true,
+// 
+//     // Rule MD003 - Heading style
+//     // Options: "consistent", "atx", "atx_closed", "setext"
+//     "MD003": { "style": "consistent" },
+// 
+//     // Rule MD004 - Unordered list style
+//     // Options: "consistent", "asterisk", "plus", "dash", "sublist"
+//     "MD004": { "style": "consistent" },
+// 
+//     // Rule MD005 - Inconsistent indentation for list items at the same level
+//     "MD005": true,
+// 
+//     // Rule MD006 - Consider starting bulleted lists at the beginning of the line
+//     "MD006": true,
+// 
+//     // Rule MD007 - Unordered list indentation
+//     "MD007": { "indent": 4,                                                    //default is 2 spaces, list items should be indented by the configured number of spaces (default: 2) : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md007.md
+//                "start_indented": false,                                        // whether to indent the first level of the list
+//                "start_indent": 4                                               // spaces for first level indent (when start_indented is set)
+//              },
+// 
+//     // Rule MD009 - Trailing spaces
+//     "MD009": { "br_spaces": 2 },                                               // allows up to 2 trailing spaces for line breaks
+// 
+//     // Rule MD010 - Hard tabs
+//     "MD010": true,
+// 
+//     // Rule MD011 - Reversed link syntax
+//     "MD011": true,
+// 
+//     // Rule MD012 - Multiple consecutive blank lines
+//     "MD012": false,                                                            // default is true, no multiple consecutive blank lines : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md012.md
+// 
+//     // Rule MD013 - Maximum line length
+//     "MD013": { "line_length": 300,
+//                "ignore_code_blocks": true,
+//                "tables": true
+//              }, // default is 80
+// 
+//     // Rule MD014 - Dollar signs used before commands without showing output
+//     "MD014": true,
+// 
+//     // Rule MD018 - No space after hash on atx style heading
+//     "MD018": true,
+// 
+//     // Rule MD019 - Multiple spaces after hash on atx style heading
+//     "MD019": true,
+// 
+//     // Rule MD020 - No space inside hashes on closed atx style heading
+//     "MD020": true,
+// 
+//     // Rule MD021 - Multiple spaces inside hashes on closed atx style heading
+//     "MD021": true,
+// 
+//     // Rule MD022 - Headings should be surrounded by blank lines
+//     "MD022": true,
+// 
+//     // Rule MD023 - Headings must start at the beginning of the line
+//     "MD023": true,
+// 
+//     // Rule MD024 - Multiple headings with the same content
+//     "MD024": true,
+// 
+//     // Rule MD025 - Multiple top-level headings in the same document
+//     "MD025": true,
+// 
+//     // Rule MD026 - Trailing punctuation in heading
+//     "MD026": { "punctuation": ".,;:!" },
+// 
+//     // Rule MD027 - Multiple spaces after blockquote symbol
+//     "MD027": true,
+// 
+//     // Rule MD028 - Blank line inside blockquote
+//     "MD028": true,
+// 
+//     // Rule MD029 - Ordered list item prefix
+//     // Options: "one", "ordered", "one_or_ordered"
+//     "MD029": { "style": "one" },
+// 
+//     // Rule MD030 - Spaces after list markers
+//     // Options: "one", "zero", "consistent"
+//     "MD030": { "ul_single": 1, "ol_single": 1, "ul_multi": 1, "ol_multi": 1 },
+// 
+//     // Rule MD031 - Fenced code blocks should be surrounded by blank lines
+//     "MD031": true,
+// 
+//     // Rule MD032 - Lists should be surrounded by blank lines
+//     "MD032": true,
+// 
+//     // Rule MD033 - Inline HTML
+//     "MD033": false,                                                             // default is true, Inline HTML : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md033.md
+// 
+//     // Rule MD034 - Bare URL used
+//     "MD034": true,
+// 
+//     // Rule MD035 - Horizontal rule style
+//     "MD035": { "style": "---------------" },                                   // default are these options: "consistent", "---", "***", "___", horizontal rule style : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md035.md
+// 
+//     // Rule MD036 - Emphasis used instead of a heading
+//     "MD036": true,
+// 
+//     // Rule MD037 - Spaces inside emphasis markers
+//     "MD037": true,
+// 
+//     // Rule MD038 - Spaces inside code span elements
+//     "MD038": true,
+// 
+//     // Rule MD039 - Spaces inside link text
+//     "MD039": true,
+// 
+//     // Rule MD040 - Fenced code blocks should have a language specified
+//     "MD040": true,
+// 
+//     // Rule MD041 - First line in file should be a top-level heading
+//     "MD041": false,                                                           // default is true, first line in a file should be a top-level heading : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md041.md
+// 
+//     // Rule MD042 - No empty links
+//     "MD042": true,
+// 
+//     // Rule MD043 - Required heading structure
+//     //"MD043": { "headings": ["# Introduction", "## Overview", "## Details", "## Conclusion"] },   // define the expected heading structure
+//     "MD043": false,
+// 
+//     // Rule MD044 - Proper names should have the correct capitalization
+//     // List of proper names to check
+//     //"MD044": { "names": ["JavaScript", "Node.js", "Markdown"] },
+//     "MD044": false,
+// 
+//     // Rule MD045 - Images should have alternate text (alt text)
+//     "MD045": true,                                                             // default is true, images should have alternate text (alt text) : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md045.md
+// 
+//     // Rule MD046 - Code block style
+//     // Options: "consistent", "fenced", "indented"
+//     "MD046": { "style": "consistent" },
+// 
+//     // Rule MD047 - Files should end with a single newline character
+//     "MD047": true,
+// 
+//     // Rule MD048 - Code fence style
+//     // Options: "consistent", "backtick", "tilde"
+//     "MD048": { "style": "consistent" },
+// 
+//     // Rule MD049 - Emphasis style should be consistent
+//     // Options: "consistent", "asterisk", "underscore"
+//     "MD049": { "style": "consistent" },
+// 
+//     // Rule MD050 - Strong style should be consistent
+//     // Options: "consistent", "asterisk", "underscore"
+//     "MD050": { "style": "consistent" },
+// 
+//     // Rule MD051 - Link fragments should be valid
+//     "MD051": true,
+// 
+//     // Rule MD052 - Reference links and images should use a label that is defined
+//     "MD052": true,
+// 
+//     // Rule MD053 - Link and image reference definitions should be needed
+//     "MD053": true,
+// 
+//     // Rule MD054 - Link and image style
+//     // Options: "consistent", "referenced", "shortcut", "collapsed", "full"
+//     "MD054": { "style": "consistent" },
+// 
+//     // Rule MD055 - Table pipe style
+//     // Options: "consistent", "piped", "unpiped"
+//     "MD055": { "style": "consistent" },
+// 
+//     // Rule MD056 - Table column count
+//     "MD056": true,
+// 
+//     // Rule MD057 - Unordered list marker style
+//     // Options: "consistent", "asterisk", "plus", "dash"
+//     "MD057": { "style": "consistent" },
+// 
+//     // Rule MD058 - Space between list markers and text
+//     // Options: "consistent", "one", "zero"
+//     "MD058": { "style": "consistent" },
+// 
+//     // Rule MD059 - List item spacing
+//     // Options: "consistent", "single", "double"
+//     "MD059": { "style": "consistent" },
+// 
+//     // Rule MD060 - Fence style for code blocks
+//     // Options: "consistent", "backtick", "tilde"
+//     "MD060": { "style": "consistent" }
+// },
+// // Paths to ignore
+// "ignores": [
+//    "node_modules",
+//    "dist",
+//    "build"
+// ],
+// // Fix mode (set to true to auto-fix issues)
+// "fix": false
+// }

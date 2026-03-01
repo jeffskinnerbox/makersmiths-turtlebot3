@@ -1,0 +1,23 @@
+# Backups created by Claude Code
+*.bak
+
+# Large binary docs (keep in local docs/ only)
+docs/*.pdf
+
+# Photos (large binaries, not needed in repo)
+pictures/
+
+# ROS 2 build artifacts (once workspace exists)
+src/build/
+src/install/
+src/log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor
+.vscode/settings.json
+*.swp
+*~
