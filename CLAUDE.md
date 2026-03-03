@@ -68,7 +68,11 @@ turtlebot3/
 ├── config/params.yaml      # TurtleBot3 node params
 ├── input/                  # raw author inputs (vision, prompts)
 ├── docs/                   # reference documents
-└── src/                    # colcon workspace (host-mounted into container)
+├── specification.md        # full project spec: architecture, phases, test criteria
+└── src/                    # colcon workspace (host-mounted into both containers)
+    ├── tb3_bringup/        # launch files for sim + robot (phase 5)
+    ├── tb3_controller/     # velocity controller node (phase 4+)
+    └── tb3_description/    # URDF/meshes if not in robotis image (phase 4+)
 ```
 
 ## Skill Library (`.claude/skills/`)
@@ -89,9 +93,21 @@ Invoke via the `Skill` tool or `/<skill-name>`:
 
 Config: `.markdownlint-cli2.jsonc` (max line length 300, disabled: MD012 MD022 MD024 MD041 MD045).
 
+## Test Requirements (from `specification.md`)
+
+Non-interactive; run via `docker exec`. pytest + JUnit XML output.
+
+| ID | Test | Pass Criteria |
+|----|------|---------------|
+| T1 | Container startup | Both containers start; `which ros2` exits 0 |
+| T2 | Topic comms | `/scan` published by turtlebot, received by simulator |
+| T3 | Gazebo launch | TB3 world loads; `/clock` active |
+| T4 | Drive command | Publish `Twist` to `/cmd_vel`; `/odom` changes |
+
 ## Known Gotchas
 
 - **Docker permission denied**: `jeff` in `docker` group but session predates `usermod`. Prefix with `sg docker -c "..."` until fresh login.
 - **`ubuntu` user conflict**: `osrf/ros:jazzy-desktop-full` ships `ubuntu` at UID 1000. Dockerfile must `userdel -r ubuntu` before `useradd ros_user`.
 - **`docker run -it` in Claude Code**: no TTY in subprocess — start detached with `sleep infinity`, then attach from user's terminal.
 - **`ros2 topic list` hangs**: DDS peer discovery blocks. Use `which ros2` or `python3 -c "import rclpy"` to verify ROS without blocking.
+- **Production networking**: turtlebot container on RPi 4 uses `--network host` (required for DDS multicast across machines on same LAN); simulator stays on desktop.
