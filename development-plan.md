@@ -200,36 +200,40 @@ Each phase ends with a **test gate** — do not proceed to the next phase until 
 
 ```text
 .devcontainer/
-  Dockerfile.turtlebot        ← headless turtlebot container
-  Dockerfile.simulator        ← desktop + Gazebo + Nav2
-  devcontainer.json           ← VS Code entry (simulator container)
-docker-compose.yml            ← services: turtlebot, simulator; network: ros_net
-entrypoint.sh                 ← source ROS + workspace on startup
+  Dockerfile.turtlebot  ← ✅ created 2026-03-03; FROM robotis/turtlebot3:jazzy (D6)
+  Dockerfile.simulator  ← ✅ created 2026-03-03; FROM osrf/ros:jazzy-desktop-full + TB3/Nav2/SLAM
+  devcontainer.json     ← ✅ created 2026-03-03; VS Code entry (simulator container)
+docker-compose.yml      ← ✅ created 2026-03-03; services: turtlebot, simulator; network_mode: host
+entrypoint.sh           ← ✅ created 2026-03-03; source ROS + workspace on startup
 scripts/
-  build.sh                    ← build both images
-  run_docker.sh               ← start stack (GPU auto-detect)
-  attach_terminal.sh
-  workspace.sh                ← rosdep + colcon build (run inside container)
+  build.sh              ← ✅ created 2026-03-03; build both images
+  run_docker.sh         ← ✅ created 2026-03-03; start stack (GPU auto-detect)
+  attach_terminal.sh    ← ✅ created 2026-03-03
+  workspace.sh          ← ✅ created 2026-03-03; rosdep + colcon build (run inside container)
 config/
-  params.yaml                 ← shared TB3 node params
+  params.yaml           ← ✅ created 2026-03-03; shared TB3 node params
 ```
+
+> **Networking decision**: `network_mode: host` (not bridge `ros_net`) chosen for both containers
+> so DDS multicast works without CycloneDDS unicast config. Matches production RPi4 approach.
 
 **Test gate** (T1):
 
 ```bash
-# Both containers start
-docker-compose up -d
+# Build images (prefix with sg docker -c "..." until re-login)
+bash scripts/build.sh
+
+# Start both containers
+docker compose up -d
+# OR: bash scripts/run_docker.sh
+
+# Verify ROS in each container
 docker exec turtlebot3_turtlebot which ros2   # exits 0
 docker exec turtlebot3_simulator which ros2   # exits 0
-docker exec turtlebot3_simulator which gazebo  # exits 0
+docker exec turtlebot3_simulator which gz     # exits 0 (Gazebo Harmonic: gz not gazebo)
 ```
 
-**Phase 1 fallback (if R1 confirmed)**: `Dockerfile.turtlebot` uses `FROM osrf/ros:jazzy-ros-base` and installs:
-
-```dockerfile
-RUN apt-get install -y ros-jazzy-turtlebot3 ros-jazzy-turtlebot3-msgs \
-    ros-jazzy-rmw-cyclonedds-cpp
-```
+> **Note**: R1 retired — `robotis/turtlebot3:jazzy` confirmed. No fallback needed.
 
 ---
 

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 partial (D6/R1 resolved; R2/R3 still open). Phase 1 (DevContainer) not started — no `.devcontainer/`, `scripts/`, or `docker-compose.yml` yet. Phase 2 workspace scaffold files created in `src/` but colcon build test gate blocked until Phase 1 is done.
+**Current status**: Phase 1 (DevContainer) files created — images need to be built and test gate run. Phase 2 scaffold created. Next: `bash scripts/build.sh` then run Phase 1 test gate.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 > **Session-start protocol**: At the start of each work session, read `development-plan.md` and update
@@ -25,7 +25,7 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 ### Development Phases
 
 0. **Prerequisites** ⚠️ — D6/R1 resolved; R2 (Gazebo Harmonic compat) + R3 (arm64) still open
-1. **DevContainer** ❌ — Two-container Docker stack (turtlebot + simulator)
+1. **DevContainer** ⚠️ — Files created; images not yet built/tested
 2. **Workspace scaffold** ❌ — `src/` packages, rosdep, colcon config
 3. **Architecture design** ❌ — Node graph, topic contracts, tf2 frame tree
 4. **Teleoperation in sim** ❌ — Gazebo Harmonic + keyboard teleop; tests T3, T4
@@ -45,17 +45,24 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 ### Key Commands
 
 ```bash
-# Build image (sg needed until fresh login after docker group usermod)
+# Build both images (sg needed until fresh login after docker group usermod)
 sg docker -c "bash scripts/build.sh"
 
-# Start container detached
-sg docker -c "docker run -d --name turtlebot3_dev turtlebot3_dev sleep infinity"
+# Start both containers (GPU auto-detected)
+sg docker -c "bash scripts/run_docker.sh"
+# OR: sg docker -c "docker compose up -d"
 
-# Attach shell
-docker exec -it turtlebot3_dev bash
+# Attach shell to simulator
+bash scripts/attach_terminal.sh turtlebot3_simulator
+# OR: docker exec -it turtlebot3_simulator bash
 
-# Inside container: build workspace
-bash /home/ros_user/ros2_ws/scripts/workspace.sh
+# Phase 1 test gate
+docker exec turtlebot3_turtlebot which ros2   # exits 0
+docker exec turtlebot3_simulator which ros2   # exits 0
+docker exec turtlebot3_simulator which gz     # exits 0 (Gazebo Harmonic)
+
+# Inside simulator container: build workspace
+docker exec turtlebot3_simulator bash /home/ros_user/ros2_ws/scripts/workspace.sh
 
 # Markdown lint (run before committing .md files)
 markdownlint-cli2 "**/*.md"
@@ -67,24 +74,25 @@ markdownlint-cli2 --fix "**/*.md"
 ```
 turtlebot3/
 ├── .devcontainer/
-│   ├── Dockerfile          # osrf:jazzy-desktop-full + TB3 pkgs + ros_user
-│   └── devcontainer.json
+│   ├── Dockerfile.simulator  # osrf:jazzy-desktop-full + TB3/Nav2/SLAM + ros_user
+│   ├── Dockerfile.turtlebot  # robotis/turtlebot3:jazzy + CycloneDDS + ros_user
+│   └── devcontainer.json     # VS Code entry (simulator container)
+├── .colcon/defaults.yaml     # colcon build defaults (mounted into both containers)
 ├── scripts/
-│   ├── build.sh            # docker build
-│   ├── run_docker.sh       # start container (GPU auto-detect)
-│   ├── attach_terminal.sh
-│   └── workspace.sh        # rosdep + colcon build (run inside container)
-├── docker-compose.yml      # services: dev, sim, robot
-├── entrypoint.sh           # sources ROS on container startup
-├── config/params.yaml      # TurtleBot3 node params
-├── input/                  # raw author inputs (vision, prompts)
-├── docs/                   # reference documents
-├── specification.md        # full project spec: architecture, phases, test criteria
-├── development-plan.md     # living dev plan: phases, decisions log, risk register
-└── src/                    # colcon workspace (host-mounted into both containers)
-    ├── tb3_bringup/        # launch files for sim + robot (phase 5)
-    ├── tb3_controller/     # velocity controller node (phase 4+)
-    └── tb3_description/    # URDF/meshes if not in robotis image (phase 4+)
+│   ├── build.sh              # build both images
+│   ├── run_docker.sh         # start both containers (GPU auto-detect)
+│   ├── attach_terminal.sh    # attach shell to named container
+│   └── workspace.sh          # rosdep + colcon build (run inside container)
+├── docker-compose.yml        # services: simulator, turtlebot (network_mode: host)
+├── entrypoint.sh             # sources ROS + workspace on container startup
+├── config/params.yaml        # TurtleBot3 node params
+├── input/                    # raw author inputs (vision, prompts)
+├── docs/                     # reference documents
+├── specification.md          # full project spec: architecture, phases, test criteria
+├── development-plan.md       # living dev plan: phases, decisions log, risk register
+└── src/                      # colcon workspace (host-mounted into both containers)
+    ├── tb3_bringup/          # launch files, configs, RViz (phase 4+)
+    └── tb3_controller/       # velocity controller, obstacle avoidance node (phase 5+)
 ```
 
 ## Skill Library (`.claude/skills/`)

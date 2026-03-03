@@ -7,10 +7,10 @@ docs/*.pdf
 # Photos (large binaries, not needed in repo)
 pictures/
 
-# ROS 2 build artifacts (once workspace exists)
-src/build/
-src/install/
-src/log/
+# ROS 2 colcon build artifacts (generated inside container, not on host)
+build/
+install/
+log/
 
 # Python
 __pycache__/

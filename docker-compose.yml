@@ -1,0 +1,59 @@
+# Two-container ROS 2 stack: simulator (desktop) + turtlebot (headless controller)
+#
+# Both services use network_mode: host so DDS multicast discovery works without
+# extra CycloneDDS unicast configuration. ipc: host enables shared-memory transport.
+#
+# Production (RPi4): run only the turtlebot service with --network host directly;
+# see docker-compose.prod.yml (Phase 10).
+#
+# Usage:
+#   xhost +local:docker                  # allow X11 access (once per login)
+#   sg docker -c "docker compose up -d"  # until fresh login after usermod
+#   docker exec -it turtlebot3_simulator bash
+#   docker exec -it turtlebot3_turtlebot bash
+#   docker compose down
+
+x-ros-common: &ros-common
+  network_mode: host
+  ipc: host
+  environment:
+    - DISPLAY
+    - XAUTHORITY=/tmp/.Xauthority
+    - QT_X11_NO_MITSHM=1
+    - ROS_DISTRO=jazzy
+    - ROS_DOMAIN_ID=0
+    - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    - TURTLEBOT3_MODEL=burger
+  volumes:
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - ${HOME}/.Xauthority:/tmp/.Xauthority:ro
+    - ./src:/home/ros_user/ros2_ws/src:cached
+    - ./.colcon:/home/ros_user/ros2_ws/.colcon:ro
+  restart: "no"
+
+services:
+  simulator:
+    <<: *ros-common
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.simulator
+      args:
+        ROS_DISTRO: jazzy
+    image: turtlebot3_simulator
+    container_name: turtlebot3_simulator
+    stdin_open: true
+    tty: true
+    command: sleep infinity
+
+  turtlebot:
+    <<: *ros-common
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.turtlebot
+      args:
+        ROS_DISTRO: jazzy
+    image: turtlebot3_robot
+    container_name: turtlebot3_turtlebot
+    stdin_open: true
+    tty: true
+    command: sleep infinity
