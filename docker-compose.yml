@@ -51,7 +51,7 @@ services:
       context: .
       dockerfile: .devcontainer/Dockerfile.turtlebot
       args:
-        ROS_DISTRO: jazzy
+        TB3_IMAGE: robotis/turtlebot3:jazzy-pc-latest
     image: turtlebot3_robot
     container_name: turtlebot3_turtlebot
     stdin_open: true

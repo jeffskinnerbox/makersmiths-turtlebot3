@@ -61,7 +61,7 @@ This section records *what* was decided and *why*. Update when a decision change
 | D3 | DDS middleware | CycloneDDS (`rmw_cyclonedds_cpp`) | Best multi-machine perf; Jazzy default | ✅ Final |
 | D4 | Language | Python (rclpy) | Faster iteration; sufficient for TB3 scale | ✅ Final |
 | D5 | Repo structure | Monorepo (`src/` in this repo) | Solo project; simplest CI and atomic commits | ✅ Final |
-| D6 | turtlebot base image | `FROM robotis/turtlebot3:jazzy` | Tag confirmed to exist (2026-03-03) | ✅ Final |
+| D6 | turtlebot base image | `robotis/turtlebot3:jazzy-pc-latest` (dev) / `jazzy-sbc-latest` (RPi4) | `jazzy` tag does not exist; correct tags are `jazzy-pc-latest` and `jazzy-sbc-latest` (2026-03-03) | ✅ Final |
 | D7 | SLAM library | `slam_toolbox` (online async) | Jazzy default, active maintenance | ✅ Final |
 | D8 | Navigation stack | Nav2 | Standard ROS 2 nav; Jazzy-compatible | ✅ Final |
 | D9 | Obstacle avoidance approach | Reactive node using `/scan` | Simpler than full Nav2 costmap; build first, then integrate with Nav2 | ✅ Final |
@@ -71,9 +71,11 @@ This section records *what* was decided and *why*. Update when a decision change
 
 ### D6 resolution path
 
-✅ **Resolved 2026-03-03**: `robotis/turtlebot3:jazzy` confirmed to exist.
-Use `FROM robotis/turtlebot3:jazzy` in `Dockerfile.turtlebot`.
-R1 retired. R3 (arm64 support) still needs `docker manifest inspect` verification.
+✅ **Resolved 2026-03-03**: `robotis/turtlebot3:jazzy` tag does NOT exist.
+Correct tags: `jazzy-pc-latest` (amd64 desktop dev) and `jazzy-sbc-latest` (arm64 RPi4 production).
+Use `FROM robotis/turtlebot3:jazzy-pc-latest` in `Dockerfile.turtlebot` for development.
+Switch to `jazzy-sbc-latest` for Phase 10 RPi4 deployment.
+R1 retired. R3 (arm64) partially resolved: `jazzy-sbc-latest` tag exists and is listed as arm64 — confirm with `docker manifest inspect` before Phase 10.
 
 ---
 
@@ -83,9 +85,9 @@ Update status and notes as risks materialize or are retired.
 
 | ID | Risk | Likelihood | Impact | Mitigation | Status |
 |---|---|---|---|---|---|
-| R1 | `robotis/turtlebot3` has no Jazzy Docker tag | High | High | Verify in Phase 0; fallback: custom Dockerfile from `osrf/ros:jazzy-ros-base` | ✅ Retired — tag confirmed 2026-03-03 |
-| R2 | `turtlebot3_gazebo` not ported to Gazebo Harmonic | Medium | High | Use `turtlebot3_gazebo` from `ros-jazzy-turtlebot3-*` apt packages; verify in Phase 1 | ⚠️ Open |
-| R3 | RPi4 Docker image is x86-only (no `linux/arm64`) | Medium | High | Check `docker manifest inspect robotis/turtlebot3:jazzy` for arm64 support; may need multi-arch build | ⚠️ Open |
+| R1 | `robotis/turtlebot3` has no Jazzy Docker tag | High | High | `jazzy` tag absent; use `jazzy-pc-latest` (dev) and `jazzy-sbc-latest` (RPi4) | ✅ Retired — correct tags identified 2026-03-03 |
+| R2 | `turtlebot3_gazebo` not ported to Gazebo Harmonic | Medium | High | `ros-jazzy-turtlebot3-gazebo` 2.3.7 confirmed installed in simulator image (2026-03-03) | ✅ Retired |
+| R3 | RPi4 Docker image is x86-only (no `linux/arm64`) | Medium | High | `jazzy-sbc-latest` tag exists and is listed as arm64; confirm with `docker manifest inspect robotis/turtlebot3:jazzy-sbc-latest` before Phase 10 | ⚠️ Likely resolved — verify before Phase 10 |
 | R4 | Nav2 Jazzy API changes vs Humble | Low | Medium | Pin to `ros-jazzy-navigation2`; follow Jazzy migration guide | ⚠️ Open |
 | R5 | CycloneDDS multicast blocked on LAN | Low | Medium | Use unicast peer list in `cyclone_dds.xml`; test with `ros2 doctor` | ⚠️ Open |
 | R6 | Gazebo Harmonic + software rendering (`LIBGL_ALWAYS_SOFTWARE`) too slow | Medium | Low | Acceptable for demo; mitigate with reduced world complexity | ⚠️ Open |
@@ -177,10 +179,10 @@ Each phase ends with a **test gate** — do not proceed to the next phase until 
 
 **Deliverables**:
 
-- [x] Pull `robotis/turtlebot3:jazzy` → confirmed tag exists; D6 updated to Final (2026-03-03)
-- [ ] Check `docker manifest inspect robotis/turtlebot3:jazzy` → confirm `linux/arm64` support (R3)
-- [ ] Confirm `ros-jazzy-turtlebot3-gazebo` exists in apt (`apt-cache search turtlebot3` inside a jazzy container)
-- [x] Update D6 and R1 in this document with findings (R2/R3 still open)
+- [x] Pull `robotis/turtlebot3:jazzy` → tag absent; correct tags are `jazzy-pc-latest` / `jazzy-sbc-latest` (2026-03-03)
+- [ ] Check `docker manifest inspect robotis/turtlebot3:jazzy-sbc-latest` → confirm `linux/arm64` (R3, defer to Phase 10)
+- [x] Confirm `ros-jazzy-turtlebot3-gazebo` exists in apt → version 2.3.7 installed in simulator image (2026-03-03); R2 retired
+- [x] Update D6, R1, R2 in this document (R3 open — defer to Phase 10)
 
 **Test gate**: All three checks completed; D6 updated; no showstopper blockers unmitigated.
 

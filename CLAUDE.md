@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 1 (DevContainer) files created — images need to be built and test gate run. Phase 2 scaffold created. Next: `bash scripts/build.sh` then run Phase 1 test gate.
+**Current status**: Phase 0 ✅, Phase 1 ✅ (T1 passed 2026-03-03), Phase 2 scaffold done (colcon build test gate pending). Next: run Phase 2 test gate inside simulator container.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 > **Session-start protocol**: At the start of each work session, read `development-plan.md` and update
@@ -24,8 +24,8 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 
 ### Development Phases
 
-0. **Prerequisites** ⚠️ — D6/R1 resolved; R2 (Gazebo Harmonic compat) + R3 (arm64) still open
-1. **DevContainer** ⚠️ — Files created; images not yet built/tested
+0. **Prerequisites** ✅ — D6/R1/R2 resolved; R3 (arm64) deferred to Phase 10
+1. **DevContainer** ✅ — T1 passed 2026-03-03; gz at `/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz`
 2. **Workspace scaffold** ❌ — `src/` packages, rosdep, colcon config
 3. **Architecture design** ❌ — Node graph, topic contracts, tf2 frame tree
 4. **Teleoperation in sim** ❌ — Gazebo Harmonic + keyboard teleop; tests T3, T4
@@ -131,5 +131,6 @@ Non-interactive; run via `docker exec`. pytest + JUnit XML output.
 - **`docker run -it` in Claude Code**: no TTY in subprocess — start detached with `sleep infinity`, then attach from user's terminal.
 - **`ros2 topic list` hangs**: DDS peer discovery blocks. Use `which ros2` or `python3 -c "import rclpy"` to verify ROS without blocking.
 - **Production networking**: turtlebot container on RPi 4 uses `--network host` (required for DDS multicast across machines on same LAN); simulator stays on desktop.
-- **`robotis/turtlebot3` Jazzy tag**: unverified — see D6 in `development-plan.md`. Fallback: `FROM osrf/ros:jazzy-ros-base` + `ros-jazzy-turtlebot3*` apt packages.
+- **`robotis/turtlebot3` tag**: `jazzy` tag does NOT exist. Use `jazzy-pc-latest` (dev/amd64) or `jazzy-sbc-latest` (RPi4/arm64).
+- **`gz` binary path**: not in standard PATH — at `/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz`. Both Dockerfiles add it via `ENV PATH`.
 - **Gazebo Harmonic**: use `gz sim` (not `gazebo`); `gz_ros2_control` bridge; `ros-jazzy-turtlebot3-gazebo` must have Harmonic-compatible worlds (risk R2).

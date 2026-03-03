@@ -1,8 +1,9 @@
 # ── TurtleBot3 robot container (headless controller) ─────────────────────────
 # Archetype A: Minimal CLI
-# D6 confirmed: robotis/turtlebot3:jazzy tag exists (2026-03-03)
-ARG ROS_DISTRO=jazzy
-FROM robotis/turtlebot3:${ROS_DISTRO}
+# D6 updated: correct tag is jazzy-pc-latest (desktop dev) or jazzy-sbc-latest (RPi4 production)
+# Production RPi4 deploy: change to robotis/turtlebot3:jazzy-sbc-latest (arm64)
+ARG TB3_IMAGE=robotis/turtlebot3:jazzy-pc-latest
+FROM ${TB3_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
@@ -26,10 +27,11 @@ RUN existing=$(getent passwd 1000 | cut -d: -f1) \
 RUN mkdir -p /home/ros_user/ros2_ws/src \
   && chown -R ros_user:ros_user /home/ros_user/ros2_ws
 
-ENV ROS_DISTRO=${ROS_DISTRO}
+ENV ROS_DISTRO=jazzy
 ENV TURTLEBOT3_MODEL=burger
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 ENV ROS_DOMAIN_ID=0
+ENV PATH=/opt/ros/jazzy/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:$PATH
 
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /home/ros_user/.bashrc \
   && echo "source /home/ros_user/ros2_ws/install/setup.bash 2>/dev/null || true" \

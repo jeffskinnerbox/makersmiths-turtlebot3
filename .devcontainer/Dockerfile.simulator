@@ -49,11 +49,12 @@ RUN userdel -r ubuntu 2>/dev/null || true \
 RUN mkdir -p /home/ros_user/ros2_ws/src \
   && chown -R ros_user:ros_user /home/ros_user/ros2_ws
 
-ENV ROS_DISTRO=${ROS_DISTRO}
+ENV ROS_DISTRO=jazzy
 ENV TURTLEBOT3_MODEL=burger
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 ENV ROS_DOMAIN_ID=0
 ENV QT_X11_NO_MITSHM=1
+ENV PATH=/opt/ros/jazzy/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:$PATH
 
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /home/ros_user/.bashrc \
   && echo "source /home/ros_user/ros2_ws/install/setup.bash 2>/dev/null || true" \
