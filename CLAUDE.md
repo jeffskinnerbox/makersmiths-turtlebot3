@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: DevContainer scaffolded and verified. Next step: scaffold `ros2_ws/` with `ros_workspace` skill, then create ROS 2 packages.
+**Current status**: Phase 0 (prerequisites check) is next. DevContainer files not yet created.
+See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 ### Target Architecture: Two-Container System
 
@@ -20,10 +21,14 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 
 ### Development Phases
 
-1. **DevContainer** ✅ — Docker environment scaffolded and verified
-2. **Simulation** — Two-container sim stack (turtlebot + simulator); automated tests
-3. **Documentation** — Operational docs for sim environment
-4. **Hardware load** — Ubuntu 24.04 + Docker on Raspberry Pi 4; deploy turtlebot image
+0. **Prerequisites** ❌ — Verify `robotis/turtlebot3:jazzy` image + arm64 support
+1. **DevContainer** ❌ — Two-container Docker stack (turtlebot + simulator)
+2. **Workspace scaffold** ❌ — `src/` packages, rosdep, colcon config
+3. **Architecture design** ❌ — Node graph, topic contracts, tf2 frame tree
+4. **Simulation behaviors** ❌ — Teleop → obstacle avoidance → SLAM → Nav2 (incremental)
+5. **Automated tests** ❌ — T1–T4 pytest suite
+6. **Documentation** ❌ — Operational docs for sim environment
+7. **Hardware load** ❌ — Ubuntu 24.04 + Docker on Raspberry Pi 4; deploy turtlebot image
 
 ### Container Environment
 
@@ -69,6 +74,7 @@ turtlebot3/
 ├── input/                  # raw author inputs (vision, prompts)
 ├── docs/                   # reference documents
 ├── specification.md        # full project spec: architecture, phases, test criteria
+├── development-plan.md     # living dev plan: phases, decisions log, risk register
 └── src/                    # colcon workspace (host-mounted into both containers)
     ├── tb3_bringup/        # launch files for sim + robot (phase 5)
     ├── tb3_controller/     # velocity controller node (phase 4+)
