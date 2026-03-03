@@ -7,23 +7,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Planning phase — no DevContainer files, workspace, or ROS 2 packages exist yet.
-Next step: invoke `ros_devcontainer` skill to scaffold the Docker environment.
+**Current status**: DevContainer scaffolded and verified. Next step: scaffold `ros2_ws/` with `ros_workspace` skill, then create ROS 2 packages.
 
-### Target Stack
+### Target Architecture: Two-Container System
 
-- ROS 2 Jazzy Jalisco
-- Docker DevContainers (VS Code Remote Containers)
-- Base image: `osrf/ros:jazzy-desktop-full` (GUI/sim dev), `ros:jazzy-ros-base` (headless/CI)
-- Primary reference: `docs/RCLPY-From-Zero-To-Hero-1-kwlngi.pdf` pp. 14–23
+| Container | Image | Role |
+|---|---|---|
+| `turtlebot` | `robotis/turtlebot3` | Headless robot controller |
+| `simulator` | `osrf/ros:jazzy-desktop-full` | Gazebo, RViz, rqt, full desktop |
+
+Containers communicate over a shared Docker network. The `turtlebot` container runs on the physical Raspberry Pi 4 in production.
 
 ### Development Phases
 
-1. **ROS2 Base Headless** — `ros:jazzy-ros-base` DevContainer; follow book pp. 14–23
-2. **TurtleBot3 DevContainer** — `osrf/ros:jazzy-desktop-full`; full sim + test tooling (Gazebo, RViz, pytest)
-3. **Hardware load** — deploy validated packages to physical Burger
+1. **DevContainer** ✅ — Docker environment scaffolded and verified
+2. **Simulation** — Two-container sim stack (turtlebot + simulator); automated tests
+3. **Documentation** — Operational docs for sim environment
+4. **Hardware load** — Ubuntu 24.04 + Docker on Raspberry Pi 4; deploy turtlebot image
 
-### Planned File Layout (post-DevContainer scaffold)
+### Container Environment
+
+- User: `ros_user` (UID 1000; `ubuntu` user removed in Dockerfile)
+- Workspace: `/home/ros_user/ros2_ws`; host `src/` mounted to `ros2_ws/src`
+- `TURTLEBOT3_MODEL=burger`, `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`, `ROS_DOMAIN_ID=0`
+
+### Key Commands
+
+```bash
+# Build image (sg needed until fresh login after docker group usermod)
+sg docker -c "bash scripts/build.sh"
+
+# Start container detached
+sg docker -c "docker run -d --name turtlebot3_dev turtlebot3_dev sleep infinity"
+
+# Attach shell
+docker exec -it turtlebot3_dev bash
+
+# Inside container: build workspace
+bash /home/ros_user/ros2_ws/scripts/workspace.sh
+
+# Markdown lint (run before committing .md files)
+markdownlint-cli2 "**/*.md"
+markdownlint-cli2 --fix "**/*.md"
+```
+
+## File Layout
 
 ```
 turtlebot3/
@@ -38,34 +66,18 @@ turtlebot3/
 ├── docker-compose.yml      # services: dev, sim, robot
 ├── entrypoint.sh           # sources ROS on container startup
 ├── config/params.yaml      # TurtleBot3 node params
+├── input/                  # raw author inputs (vision, prompts)
+├── docs/                   # reference documents
 └── src/                    # colcon workspace (host-mounted into container)
 ```
 
-### Container Environment (when running)
-
-- User: `ros_user` (UID 1000; base image `ubuntu` user must be removed first)
-- Workspace: `/home/ros_user/ros2_ws`; host `src/` mounted to `ros2_ws/src`
-- `TURTLEBOT3_MODEL=burger`, `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`, `ROS_DOMAIN_ID=0`
-- Build image: `sg docker -c "bash scripts/build.sh"` (until re-login after `usermod`)
-- Start detached: `sg docker -c "docker run -d --name turtlebot3_dev ... turtlebot3_dev sleep infinity"`
-- Attach: `docker exec -it turtlebot3_dev bash`
-
-## Key Documents
-
-| Path | Purpose |
-|---|---|
-| `input/my-vision.md` | Project goals and phase definitions |
-| `docs/RCLPY-From-Zero-To-Hero-1-kwlngi.pdf` | Primary ROS 2 reference (pp. 14–23 for DevContainer setup) |
-
-**Directory conventions**: `input/` = raw author inputs; `docs/` = generated/reference documents.
-
 ## Skill Library (`.claude/skills/`)
 
-Invoke these skills via the `Skill` tool or `/<skill-name>` for their respective domains:
+Invoke via the `Skill` tool or `/<skill-name>`:
 
 | Skill | Use When |
 |---|---|
-| `ros_devcontainer` | Docker/DevContainer setup, Dockerfile, docker-compose, GUI/VNC, GPU — **invoke first** |
+| `ros_devcontainer` | Docker/DevContainer setup, Dockerfile, docker-compose, GUI/VNC, GPU |
 | `ros_workspace` | Scaffold `ros2_ws/`, package layering, vcstool, rosdep, colcon config |
 | `ros_architect` | Node graph design, topic/service/action selection, tf2 frames, QoS, lifecycle |
 | `ros_package_node` | Create packages, Python (`rclpy`) or C++ (`rclcpp`) nodes, `package.xml`, build files |
@@ -77,21 +89,9 @@ Invoke these skills via the `Skill` tool or `/<skill-name>` for their respective
 
 Config: `.markdownlint-cli2.jsonc` (max line length 300, disabled: MD012 MD022 MD024 MD041 MD045).
 
-```bash
-# lint
-markdownlint-cli2 "**/*.md"
-
-# lint + auto-fix
-markdownlint-cli2 --fix "**/*.md"
-```
-
-Run before committing any `.md` files.
-
 ## Known Gotchas
 
-- **Docker permission denied**: `jeff` added to `docker` group but session predates `usermod`.
-  Prefix commands with `sg docker -c "..."` until a fresh login.
-- **`ubuntu` user conflict**: `osrf/ros:jazzy-desktop-full` ships `ubuntu` at UID 1000.
-  Dockerfile must `userdel -r ubuntu` before `useradd ros_user`.
+- **Docker permission denied**: `jeff` in `docker` group but session predates `usermod`. Prefix with `sg docker -c "..."` until fresh login.
+- **`ubuntu` user conflict**: `osrf/ros:jazzy-desktop-full` ships `ubuntu` at UID 1000. Dockerfile must `userdel -r ubuntu` before `useradd ros_user`.
 - **`docker run -it` in Claude Code**: no TTY in subprocess — start detached with `sleep infinity`, then attach from user's terminal.
 - **`ros2 topic list` hangs**: DDS peer discovery blocks. Use `which ros2` or `python3 -c "import rclpy"` to verify ROS without blocking.
