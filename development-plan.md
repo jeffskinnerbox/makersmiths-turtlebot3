@@ -61,7 +61,7 @@ This section records *what* was decided and *why*. Update when a decision change
 | D3 | DDS middleware | CycloneDDS (`rmw_cyclonedds_cpp`) | Best multi-machine perf; Jazzy default | ✅ Final |
 | D4 | Language | Python (rclpy) | Faster iteration; sufficient for TB3 scale | ✅ Final |
 | D5 | Repo structure | Monorepo (`src/` in this repo) | Solo project; simplest CI and atomic commits | ✅ Final |
-| D6 | turtlebot base image | **TBD** — verify first (see R1) | `robotis/turtlebot3` may have no Jazzy tag | ⚠️ Open |
+| D6 | turtlebot base image | `FROM robotis/turtlebot3:jazzy` | Tag confirmed to exist (2026-03-03) | ✅ Final |
 | D7 | SLAM library | `slam_toolbox` (online async) | Jazzy default, active maintenance | ✅ Final |
 | D8 | Navigation stack | Nav2 | Standard ROS 2 nav; Jazzy-compatible | ✅ Final |
 | D9 | Obstacle avoidance approach | Reactive node using `/scan` | Simpler than full Nav2 costmap; build first, then integrate with Nav2 | ✅ Final |
@@ -71,17 +71,9 @@ This section records *what* was decided and *why*. Update when a decision change
 
 ### D6 resolution path
 
-Before writing any Dockerfile for the `turtlebot` container, run:
-
-```bash
-docker pull robotis/turtlebot3:jazzy 2>&1 | grep -E "not found|Pulling|Status"
-```
-
-- If tag exists → use `FROM robotis/turtlebot3:jazzy`
-- If tag does not exist → use `FROM osrf/ros:jazzy-ros-base` + install
-  `ros-jazzy-turtlebot3*` packages manually (see Phase 1 fallback)
-
-**Update D6 in this table as soon as the image check is done.**
+✅ **Resolved 2026-03-03**: `robotis/turtlebot3:jazzy` confirmed to exist.
+Use `FROM robotis/turtlebot3:jazzy` in `Dockerfile.turtlebot`.
+R1 retired. R3 (arm64 support) still needs `docker manifest inspect` verification.
 
 ---
 
@@ -91,7 +83,7 @@ Update status and notes as risks materialize or are retired.
 
 | ID | Risk | Likelihood | Impact | Mitigation | Status |
 |---|---|---|---|---|---|
-| R1 | `robotis/turtlebot3` has no Jazzy Docker tag | High | High | Verify in Phase 0; fallback: custom Dockerfile from `osrf/ros:jazzy-ros-base` | ⚠️ Open |
+| R1 | `robotis/turtlebot3` has no Jazzy Docker tag | High | High | Verify in Phase 0; fallback: custom Dockerfile from `osrf/ros:jazzy-ros-base` | ✅ Retired — tag confirmed 2026-03-03 |
 | R2 | `turtlebot3_gazebo` not ported to Gazebo Harmonic | Medium | High | Use `turtlebot3_gazebo` from `ros-jazzy-turtlebot3-*` apt packages; verify in Phase 1 | ⚠️ Open |
 | R3 | RPi4 Docker image is x86-only (no `linux/arm64`) | Medium | High | Check `docker manifest inspect robotis/turtlebot3:jazzy` for arm64 support; may need multi-arch build | ⚠️ Open |
 | R4 | Nav2 Jazzy API changes vs Humble | Low | Medium | Pin to `ros-jazzy-navigation2`; follow Jazzy migration guide | ⚠️ Open |
