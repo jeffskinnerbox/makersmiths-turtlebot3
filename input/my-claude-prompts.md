@@ -69,6 +69,7 @@ and use this information to guide the creation of the ROS 2 devcontainer:
 
 ---
 
+## Creation of the Specification Document
 ### 2nd Claude Code Prompt
 Read @docs/my-vision.md and create a specification document @specification.md.
 In a subsequent phase, I need this this specification document to help prepare a detailed development plan.
@@ -76,4 +77,30 @@ Think Hard about what must be specified in the specification document so a robus
 
 Use the AskUserQuestions tool for all things that require further clarification.
 
+---
+
+## Creation of the Development Plan Document
+### 3rd Claude Code Prompt
+Read @input/my-vision.md and @specification.md and create a development plan, to be called "development-plan.md",
+describing how & when thing are to be created / build.
+The development plan must reflecting an incrementally build approach with testing after each increment.
+
+Make sure to cover the all major software components and their build order,
+key technical decisions to resolve upfront (e.g., which Python library to use),
+a rough phasing that mirrors the sequence reflected in @input/my-vision.md and @specification.md,
+and any external dependencies or risks (like software version mismatch).
+
+Produce the plan as a living document it can update as the project evolves,
+not just a one-time artifact.
+I want it to serves as an ongoing reference rather than going stale after the first few sessions.
+Given the scope of this project — raspberry pi software, a simulator on desktop computer, and incremental testing —
+I want plan to save significant back-and-forth with Claude Code over the course of development.
+
+Within the development plan document you create (to be called "development-plan.md"), include this prompt,
+all question you ask me, along with my responses.
+Place this in an appendix and reference it at the beginning of the development plan
+and anywhere else in the text when its a useful reference.
+
+Think Hard about what must be done to create a robust plan.
+Use the AskUserQuestions tool for all things that require further clarification.
 

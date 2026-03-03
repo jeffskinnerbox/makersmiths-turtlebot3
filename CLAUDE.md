@@ -7,8 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 (prerequisites check) is next. DevContainer files not yet created.
+**Current status**: Phase 1 (DevContainer) complete. No ROS 2 packages in `src/` yet — Phase 2 (workspace scaffold) is next.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
+
+> **Session-start protocol**: At the start of each work session, read `development-plan.md` and update
+> phase statuses, D6 (image decision), and the Risk Register per Section 7 of that document.
 
 ### Target Architecture: Two-Container System
 
@@ -21,14 +24,17 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 
 ### Development Phases
 
-0. **Prerequisites** ❌ — Verify `robotis/turtlebot3:jazzy` image + arm64 support
-1. **DevContainer** ❌ — Two-container Docker stack (turtlebot + simulator)
+0. **Prerequisites** ✅ — Verify `robotis/turtlebot3:jazzy` image + arm64 support
+1. **DevContainer** ✅ — Two-container Docker stack (turtlebot + simulator)
 2. **Workspace scaffold** ❌ — `src/` packages, rosdep, colcon config
 3. **Architecture design** ❌ — Node graph, topic contracts, tf2 frame tree
-4. **Simulation behaviors** ❌ — Teleop → obstacle avoidance → SLAM → Nav2 (incremental)
-5. **Automated tests** ❌ — T1–T4 pytest suite
-6. **Documentation** ❌ — Operational docs for sim environment
-7. **Hardware load** ❌ — Ubuntu 24.04 + Docker on Raspberry Pi 4; deploy turtlebot image
+4. **Teleoperation in sim** ❌ — Gazebo Harmonic + keyboard teleop; tests T3, T4
+5. **Obstacle avoidance** ❌ — Reactive node using `/scan`
+6. **SLAM + map building** ❌ — `slam_toolbox` online async; save map
+7. **Autonomous navigation** ❌ — Nav2; test T2
+8. **Automated tests** ❌ — T1–T4 pytest suite; JUnit XML
+9. **Operational documentation** ❌ — `docs/operations.md` for sim environment
+10. **Hardware load** ❌ — Ubuntu 24.04 + Docker on Raspberry Pi 4; arm64 image
 
 ### Container Environment
 
@@ -117,3 +123,5 @@ Non-interactive; run via `docker exec`. pytest + JUnit XML output.
 - **`docker run -it` in Claude Code**: no TTY in subprocess — start detached with `sleep infinity`, then attach from user's terminal.
 - **`ros2 topic list` hangs**: DDS peer discovery blocks. Use `which ros2` or `python3 -c "import rclpy"` to verify ROS without blocking.
 - **Production networking**: turtlebot container on RPi 4 uses `--network host` (required for DDS multicast across machines on same LAN); simulator stays on desktop.
+- **`robotis/turtlebot3` Jazzy tag**: unverified — see D6 in `development-plan.md`. Fallback: `FROM osrf/ros:jazzy-ros-base` + `ros-jazzy-turtlebot3*` apt packages.
+- **Gazebo Harmonic**: use `gz sim` (not `gazebo`); `gz_ros2_control` bridge; `ros-jazzy-turtlebot3-gazebo` must have Harmonic-compatible worlds (risk R2).
