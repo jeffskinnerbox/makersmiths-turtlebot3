@@ -177,10 +177,10 @@ Each phase ends with a **test gate** — do not proceed to the next phase until 
 
 **Deliverables**:
 
-- [ ] Pull `robotis/turtlebot3:jazzy` → confirm tag exists or update D6 to fallback plan
+- [x] Pull `robotis/turtlebot3:jazzy` → confirmed tag exists; D6 updated to Final (2026-03-03)
 - [ ] Check `docker manifest inspect robotis/turtlebot3:jazzy` → confirm `linux/arm64` support (R3)
 - [ ] Confirm `ros-jazzy-turtlebot3-gazebo` exists in apt (`apt-cache search turtlebot3` inside a jazzy container)
-- [ ] Update D6 and R1/R2/R3 in this document with findings
+- [x] Update D6 and R1 in this document with findings (R2/R3 still open)
 
 **Test gate**: All three checks completed; D6 updated; no showstopper blockers unmitigated.
 
@@ -243,11 +243,13 @@ RUN apt-get install -y ros-jazzy-turtlebot3 ros-jazzy-turtlebot3-msgs \
 
 ```text
 src/
-  tb3_description/   ← URDF/xacro + meshes (skip if ROBOTIS image has it)
-  tb3_controller/    ← placeholder Python package; no logic yet
-  tb3_bringup/       ← placeholder; no launch files yet
-.colcon/defaults.yaml
+  tb3_description/   ← skipped; URDF ships with robotis/turtlebot3:jazzy (D6 confirmed)
+  tb3_controller/    ← ✅ created 2026-03-03 (placeholder; no logic yet)
+  tb3_bringup/       ← ✅ created 2026-03-03 (placeholder; launch/, config/, rviz/ dirs present)
+.colcon/defaults.yaml ← ✅ created 2026-03-03 (at workspace root; needs container to take effect)
 ```
+
+> **Note**: test gate blocked until Phase 1 (DevContainer) is complete.
 
 **Test gate**:
 

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 1 (DevContainer) complete. No ROS 2 packages in `src/` yet — Phase 2 (workspace scaffold) is next.
+**Current status**: Phase 0 partial (D6/R1 resolved; R2/R3 still open). Phase 1 (DevContainer) not started — no `.devcontainer/`, `scripts/`, or `docker-compose.yml` yet. Phase 2 workspace scaffold files created in `src/` but colcon build test gate blocked until Phase 1 is done.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 > **Session-start protocol**: At the start of each work session, read `development-plan.md` and update
@@ -24,8 +24,8 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 
 ### Development Phases
 
-0. **Prerequisites** ✅ — Verify `robotis/turtlebot3:jazzy` image + arm64 support
-1. **DevContainer** ✅ — Two-container Docker stack (turtlebot + simulator)
+0. **Prerequisites** ⚠️ — D6/R1 resolved; R2 (Gazebo Harmonic compat) + R3 (arm64) still open
+1. **DevContainer** ❌ — Two-container Docker stack (turtlebot + simulator)
 2. **Workspace scaffold** ❌ — `src/` packages, rosdep, colcon config
 3. **Architecture design** ❌ — Node graph, topic contracts, tf2 frame tree
 4. **Teleoperation in sim** ❌ — Gazebo Harmonic + keyboard teleop; tests T3, T4
