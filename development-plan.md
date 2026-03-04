@@ -239,7 +239,7 @@ docker exec turtlebot3_simulator which gz     # exits 0 (Gazebo Harmonic: gz not
 
 ---
 
-### Phase 2 — Workspace scaffold
+### Phase 2 — Workspace scaffold ✅
 
 **Goal**: `src/` has the package skeleton; colcon builds cleanly inside both containers.
 
@@ -255,15 +255,13 @@ src/
 .colcon/defaults.yaml ← ✅ created 2026-03-03 (at workspace root; needs container to take effect)
 ```
 
-> **Note**: test gate blocked until Phase 1 (DevContainer) is complete.
-
-**Test gate**:
+**Test gate** ✅ passed 2026-03-03:
 
 ```bash
 docker exec turtlebot3_simulator bash -c "
   cd ~/ros2_ws &&
   colcon build --symlink-install 2>&1 | tail -5"
-# Expected: 'Summary: X packages finished'
+# Result: 'Summary: 2 packages finished [1.60s]'
 ```
 
 ---
