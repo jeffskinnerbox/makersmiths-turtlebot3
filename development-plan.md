@@ -364,7 +364,7 @@ docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && so
 
 ---
 
-### Phase 6 — SLAM + map building
+### Phase 6 — SLAM + map building ✅
 
 **Goal**: Drive the robot around; `slam_toolbox` builds a map; map is saved to disk.
 
@@ -374,28 +374,29 @@ docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && so
 
 ```text
 tb3_bringup/launch/
-  slam.launch.py              ← sim_bringup + slam_toolbox (online_async)
+  slam.launch.py              ← ✅ created 2026-03-04; includes sim_bringup + slam_toolbox online_async
 tb3_bringup/config/
-  slam_params.yaml            ← slam_toolbox tuning for TB3
-  maps/                       ← saved maps (.yaml + .pgm) go here
+  slam_params.yaml            ← ✅ created 2026-03-04; tuned for TB3 Burger (lower travel thresholds, faster map updates)
+  maps/                       ← ✅ created 2026-03-04 (directory; saved maps go here)
+scripts/
+  test_t6.py                  ← ✅ created 2026-03-04
 ```
 
-**Test gate**:
+**Gotcha**: `map_saver_cli` fails with "Failed to spin map subscription" due to DDS/QoS mismatch.
+Use slam_toolbox's own `/slam_toolbox/save_map` service instead — saves `.pgm` + `.yaml` reliably.
+
+**Test gate** ✅ passed 2026-03-04:
 
 ```bash
-# /map topic must be publishing after ~30 s of slam launch
-docker exec turtlebot3_simulator bash -c "
-  source ~/ros2_ws/install/setup.bash &&
-  ros2 launch tb3_bringup slam.launch.py &
-  sleep 30 &&
-  ros2 topic hz /map --window 3 2>&1 | grep Hz"
-# Expected: non-zero Hz output
+# Start SLAM stack headless
+docker exec -d turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 launch tb3_bringup slam.launch.py headless:=true"
+# Run T6 test (after ~30 s for slam_toolbox to start)
+docker cp scripts/test_t6.py turtlebot3_simulator:/tmp/test_t6.py
+docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && python3 /tmp/test_t6.py"
+# Output: T6_PASS
 
-# Map can be saved
-docker exec turtlebot3_simulator bash -c "
-  source ~/ros2_ws/install/setup.bash &&
-  ros2 run nav2_map_server map_saver_cli -f /tmp/test_map &&
-  ls /tmp/test_map.yaml"
+# Save a real map after driving (interactive use):
+# ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap '{name: {data: "/path/my_map"}}'
 ```
 
 ---

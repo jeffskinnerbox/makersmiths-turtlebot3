@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅ (T5 passed 2026-03-04). Next: Phase 6 — SLAM + map building.
+**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅ (T6 passed 2026-03-04). Next: Phase 7 — autonomous navigation (Nav2).
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 **Session-start protocol** — at the start of each work session:
@@ -31,7 +31,7 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 3. **Architecture design** ✅ — Node graph, topic contracts, tf2 frame tree (`docs/architecture.md`)
 4. **Teleoperation in sim** ✅ — T3+T4 passed 2026-03-05; GZ_IP+Fast-DDS fixes required
 5. **Obstacle avoidance** ✅ — Reactive node using `/scan`; T5 passed 2026-03-04
-6. **SLAM + map building** ❌ — `slam_toolbox` online async; save map
+6. **SLAM + map building** ✅ — `slam_toolbox` online async; T6 passed 2026-03-04
 7. **Autonomous navigation** ❌ — Nav2; test T2
 8. **Automated tests** ❌ — T1–T4 pytest suite; JUnit XML
 9. **Operational documentation** ❌ — `docs/operations.md` for sim environment
@@ -96,6 +96,14 @@ bash scripts/attach_terminal.sh turtlebot3_simulator
 # Teleop remapped so obstacle_avoidance_node intercepts /cmd_vel_raw → /cmd_vel:
 # ros2 launch tb3_bringup teleop.launch.py cmd_vel_topic:=/cmd_vel_raw
 
+# Phase 6: SLAM stack (headless for testing)
+# docker exec -d turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 launch tb3_bringup slam.launch.py headless:=true"
+# Save map via slam_toolbox service (NOT map_saver_cli — see gotchas):
+# docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap '{name: {data: \"/path/to/my_map\"}}'"
+# T6 test gate:
+# docker cp scripts/test_t6.py turtlebot3_simulator:/tmp/test_t6.py
+# docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && python3 /tmp/test_t6.py"
+
 # Markdown lint (run before committing .md files)
 markdownlint-cli2 "**/*.md"
 markdownlint-cli2 --fix "**/*.md"
@@ -133,7 +141,11 @@ turtlebot3/
     │   │   ├── gazebo_params.yaml      # use_sim_time: true (wildcard for all nodes)
     │   │   └── bridge_params.yaml      # gz_ros2_bridge: /cmd_vel as Twist (not TwistStamped)
     │   ├── rviz/teleop.rviz
-    │   │   └── obstacle_avoidance.launch.py  # launches obstacle_avoidance_node
+    │   │   ├── obstacle_avoidance.launch.py  # launches obstacle_avoidance_node
+│   │   └── slam.launch.py               # sim_bringup + slam_toolbox online_async
+│   ├── config/
+│   │   ├── slam_params.yaml             # slam_toolbox tuned for TB3 Burger
+│   │   └── maps/                        # saved maps (.pgm + .yaml) go here
 │   └── worlds/tb3_sim.world        # embeds TB3 burger model directly (no spawner service needed)
     └── tb3_controller/
         ├── tb3_controller/obstacle_avoidance_node.py  # sub /scan + /cmd_vel_raw; pub /cmd_vel; blocks fwd if obstacle
@@ -185,3 +197,5 @@ Non-interactive; run via `docker exec`. pytest + JUnit XML output.
 - **gz-transport also uses multicast for discovery**: `GZ_IP=127.0.0.1` forces gz-transport to use loopback, fixing the bridge connection between Gazebo and `ros_gz_bridge`. Set in docker-compose.yml.
 - **`scripts/` is mounted into the container**: `./scripts` → `~/ros2_ws/scripts`. Run `test_t4.py` as `python3 ~/ros2_ws/scripts/test_t4.py` inside the container. If the container predates the mount (e.g., started before that volume line was added), use `docker cp` instead.
 - **`ros2` CLI breaks when only workspace setup is sourced**: Always source both — `source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash` — before running `ros2 node list`, `ros2 topic echo`, etc. Sourcing only the workspace overlay causes `importlib.metadata.PackageNotFoundError: ros2cli`.
+- **`map_saver_cli` fails with "Failed to spin map subscription"**: QoS/DDS issue prevents it from receiving the latched `/map` topic. Use the slam_toolbox service instead: `ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap '{name: {data: "/path/map"}}'`. This saves `.pgm` + `.yaml` reliably.
+- **`/map` is 0x0 until robot moves**: slam_toolbox publishes an empty initial map. Map fills as the robot drives and LiDAR scans accumulate.
