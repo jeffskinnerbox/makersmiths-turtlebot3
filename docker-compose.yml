@@ -22,13 +22,20 @@ x-ros-common: &ros-common
     - QT_X11_NO_MITSHM=1
     - ROS_DISTRO=jazzy
     - ROS_DOMAIN_ID=0
-    - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    # D3 updated 2026-03-05: switched from CycloneDDS to Fast-DDS.
+    # CycloneDDS rclpy.init() hangs on hosts with many bridge/veth interfaces
+    # (multicast join blocks). Fast-DDS works reliably. See development-plan.md D3.
+    - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
     - TURTLEBOT3_MODEL=burger
+    # gz-transport also uses multicast for discovery. GZ_IP=127.0.0.1 forces
+    # it to use loopback, fixing the bridge connection on hosts with many interfaces.
+    - GZ_IP=127.0.0.1
   volumes:
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
     - ${HOME}/.Xauthority:/tmp/.Xauthority:ro
     - ./src:/home/ros_user/ros2_ws/src:cached
     - ./.colcon:/home/ros_user/ros2_ws/.colcon:ro
+    - ./scripts:/home/ros_user/ros2_ws/scripts:ro
   restart: "no"
 
 services:

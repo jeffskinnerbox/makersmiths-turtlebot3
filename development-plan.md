@@ -58,7 +58,7 @@ This section records *what* was decided and *why*. Update when a decision change
 |---|---|---|---|---|
 | D1 | ROS distro | Jazzy Jalisco | LTS, Ubuntu 24.04, current | ✅ Final |
 | D2 | Gazebo version | **Harmonic** | Default for Jazzy; Gazebo Classic deprecated | ✅ Final |
-| D3 | DDS middleware | CycloneDDS (`rmw_cyclonedds_cpp`) | Best multi-machine perf; Jazzy default | ✅ Final |
+| D3 | DDS middleware | ~~CycloneDDS~~ **Fast-DDS** (`rmw_fastrtps_cpp`) | CycloneDDS rclpy.init() hangs on hosts with many bridge/veth interfaces (multicast join blocks); Fast-DDS works reliably (2026-03-05) | ✅ Updated |
 | D4 | Language | Python (rclpy) | Faster iteration; sufficient for TB3 scale | ✅ Final |
 | D5 | Repo structure | Monorepo (`src/` in this repo) | Solo project; simplest CI and atomic commits | ✅ Final |
 | D6 | turtlebot base image | `robotis/turtlebot3:jazzy-pc-latest` (dev) / `jazzy-sbc-latest` (RPi4) | `jazzy` tag does not exist; correct tags are `jazzy-pc-latest` and `jazzy-sbc-latest` (2026-03-03) | ✅ Final |
@@ -142,16 +142,19 @@ Layer 4 — Bringup (depends on everything)
 
 ### 4d. Key topic/service contracts
 
-Defined here upfront to avoid interface drift between phases:
+> **Updated 2026-03-03** — expanded in Phase 3; full table in `docs/architecture.md` Section 4.
 
-| Interface | Type | Message | Publisher | Subscriber |
-|---|---|---|---|---|
-| `/cmd_vel` | Topic | `geometry_msgs/Twist` | teleop / nav2 | diff-drive controller |
-| `/scan` | Topic | `sensor_msgs/LaserScan` | LiDAR driver | slam, obstacle_node, costmap |
-| `/odom` | Topic | `nav_msgs/Odometry` | diff-drive controller | slam, nav2 |
-| `/map` | Topic | `nav_msgs/OccupancyGrid` | slam_toolbox | nav2 map_server, RViz |
-| `/tf` | Topic | `tf2_msgs/TFMessage` | robot_state_pub, controllers | all |
-| `/navigate_to_pose` | Action | `nav2_msgs/NavigateToPose` | user / mission node | nav2 bt_navigator |
+| Interface | Type | Message | Publisher | Subscriber(s) | QoS |
+|---|---|---|---|---|---|
+| `/scan` | Topic | `sensor_msgs/LaserScan` | `turtlebot3_node` / gz bridge | `obstacle_avoidance_node`, `slam_toolbox`, `costmap_2d` | BEST_EFFORT |
+| `/odom` | Topic | `nav_msgs/Odometry` | `turtlebot3_node` / gz bridge | `slam_toolbox`, nav2 | RELIABLE |
+| `/cmd_vel` | Topic | `geometry_msgs/Twist` | teleop (Ph4), `obstacle_avoidance_node` (Ph5), nav2 (Ph7) | `turtlebot3_node` / gz bridge | RELIABLE |
+| `/cmd_vel_raw` | Topic | `geometry_msgs/Twist` | `turtlebot3_teleop_keyboard` | `obstacle_avoidance_node` | RELIABLE |
+| `/joint_states` | Topic | `sensor_msgs/JointState` | `turtlebot3_node` / gz bridge | `robot_state_publisher` | RELIABLE |
+| `/map` | Topic | `nav_msgs/OccupancyGrid` | `slam_toolbox` (Ph6), `map_server` (Ph7) | `costmap_2d`, `amcl`, RViz | RELIABLE + TRANSIENT_LOCAL |
+| `/tf` / `/tf_static` | Topic | `tf2_msgs/TFMessage` | `robot_state_publisher`, `slam_toolbox`, `amcl` | all | RELIABLE |
+| `/navigate_to_pose` | Action | `nav2_msgs/NavigateToPose` | user / mission | `bt_navigator` | — |
+| `/slam_toolbox/save_map` | Service | `slam_toolbox/SaveMap` | user | `slam_toolbox` | — |
 
 ### 4e. tf2 frame tree
 
@@ -266,7 +269,7 @@ docker exec turtlebot3_simulator bash -c "
 
 ---
 
-### Phase 3 — Architecture design
+### Phase 3 — Architecture design ✅
 
 **Goal**: Node graph, topic contracts, and tf2 frame tree locked before any node code is written.
 Decisions made here prevent costly refactors in Phases 4–6.
@@ -276,23 +279,14 @@ Decisions made here prevent costly refactors in Phases 4–6.
 **Deliverables**:
 
 ```text
-docs/architecture.md    ← node graph, communication contracts table, frame tree, QoS profiles
+docs/architecture.md    ← ✅ created 2026-03-03; node graph, contracts, frame tree, QoS, lifecycle, open questions
 ```
 
-**Content required in `docs/architecture.md`**:
-
-1. Node graph (ASCII or Mermaid) covering all four behaviors
-2. Full communication contracts table (expand Section 4d above)
-3. tf2 frame tree (verify against URDF)
-4. QoS profile assignments per interface
-5. Lifecycle node list (which nodes need managed startup)
-6. Open questions at time of writing
-
-**Test gate**: Document reviewed; Section 4d of this plan updated with any changes; no unresolved blocking questions.
+**Test gate**: ✅ Document created 2026-03-03; Section 4d updated below; 5 open questions logged in `docs/architecture.md` Section 10 (none block Phase 4 start).
 
 ---
 
-### Phase 4 — Teleoperation in simulation
+### Phase 4 — Teleoperation in simulation ✅
 
 **Goal**: Drive the TurtleBot3 in a Gazebo Harmonic world from the keyboard; odometry responds.
 
@@ -309,25 +303,25 @@ tb3_bringup/config/
   rviz/teleop.rviz
 ```
 
-**Test gate** (T3 + T4):
+**Test gate** ✅ passed 2026-03-05:
 
 ```bash
-# T3: Gazebo world loads
+# T3: Gazebo world loads; /clock publishing
+# T4: cmd_vel → odom changes (before_x≈0, after_x≈1.13 after 4s at 0.3 m/s)
 docker exec turtlebot3_simulator bash -c "
   source ~/ros2_ws/install/setup.bash &&
-  ros2 launch tb3_bringup sim_bringup.launch.py &
-  sleep 15 &&
-  ros2 topic list | grep /clock"
-# Expected: /clock present
-
-# T4: cmd_vel → odom changes
+  ros2 launch tb3_bringup sim_bringup.launch.py headless:=true &
+  sleep 20 && timeout 10 ros2 topic echo /clock --once"
 docker exec turtlebot3_simulator bash -c "
   source ~/ros2_ws/install/setup.bash &&
-  ros2 topic pub --once /cmd_vel geometry_msgs/Twist '{linear: {x: 0.1}}' &&
-  sleep 2 &&
-  ros2 topic echo --once /odom" | grep -v "^---"
-# Expected: non-zero position in odom
+  python3 ~/ros2_ws/scripts/test_t4.py"
+# Output: T4_PASS
 ```
+
+**Fixes required to make tests pass** (2026-03-05):
+- Switched `RMW_IMPLEMENTATION` from `rmw_cyclonedds_cpp` to `rmw_fastrtps_cpp` — CycloneDDS `rclpy.init()` hangs on hosts with many bridge/veth interfaces (multicast join blocks).
+- Added `GZ_IP=127.0.0.1` to docker-compose.yml — gz-transport also uses multicast; this forces it to loopback, fixing the `ros_gz_bridge` ↔ Gazebo connection.
+- Mounted `./scripts` into containers as `~/ros2_ws/scripts`.
 
 ---
 

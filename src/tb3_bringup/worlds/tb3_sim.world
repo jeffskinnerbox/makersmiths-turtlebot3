@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<!--
+  tb3_sim.world — Phase 4
+
+  Minimal Gazebo Harmonic world for TurtleBot3 Burger simulation.
+
+  Key design decisions:
+  - Ground plane and sun defined inline (no Gazebo Fuel download needed).
+  - TurtleBot3 Burger included via model:// URI (requires GZ_SIM_RESOURCE_PATH
+    to include turtlebot3_gazebo/models — set by sim_bringup.launch.py).
+  - Robot is embedded at start pose; no ros_gz_sim spawner needed, which
+    avoids the /world/default/create service incompatibility in gz-sim 8.10.
+-->
+<sdf version="1.8">
+  <world name="default">
+
+    <!-- ── System plugins ───────────────────────────────────────────────── -->
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <!-- Sensors plugin: provides LiDAR ray casting (ogre2 render engine) -->
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu"/>
+
+    <!-- ── Physics ──────────────────────────────────────────────────────── -->
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>150</iters>
+          <sor>1.4</sor>
+        </solver>
+      </ode>
+    </physics>
+
+    <!-- ── Ground plane (inline — no Fuel download) ─────────────────────── -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Sun (inline) ─────────────────────────────────────────────────── -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- ── TurtleBot3 Burger ────────────────────────────────────────────── -->
+    <!--
+      Resolved from GZ_SIM_RESOURCE_PATH (set to turtlebot3_gazebo/models
+      by sim_bringup.launch.py via AppendEnvironmentVariable).
+      Embedding the model avoids the ros_gz_sim spawner, which requires the
+      /world/default/create service that gz-sim 8.10 no longer provides.
+    -->
+    <include>
+      <uri>model://turtlebot3_burger</uri>
+      <name>burger</name>
+      <pose>-2.0 -0.5 0.01 0 0 0</pose>
+    </include>
+
+  </world>
+</sdf>

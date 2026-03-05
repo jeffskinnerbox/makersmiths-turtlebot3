@@ -7,11 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 ✅, Phase 1 ✅ (T1 passed 2026-03-03), Phase 2 ✅ (colcon build passed 2026-03-03). Next: Phase 3 — architecture design.
+**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅ (T3+T4 passed 2026-03-05). Next: Phase 5 — obstacle avoidance.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
-> **Session-start protocol**: At the start of each work session, read `development-plan.md` and update
-> phase statuses, D6 (image decision), and the Risk Register per Section 7 of that document.
+**Session-start protocol** — at the start of each work session:
+1. Read `development-plan.md`.
+2. Update phase statuses, D6 (image decision), and the Risk Register per Section 7 of that document.
 
 ### Target Architecture: Two-Container System
 
@@ -27,8 +28,8 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 0. **Prerequisites** ✅ — D6/R1/R2 resolved; R3 (arm64) deferred to Phase 10
 1. **DevContainer** ✅ — T1 passed 2026-03-03; gz at `/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz`
 2. **Workspace scaffold** ✅ — `src/` packages, rosdep, colcon config (2026-03-03)
-3. **Architecture design** ❌ — Node graph, topic contracts, tf2 frame tree
-4. **Teleoperation in sim** ❌ — Gazebo Harmonic + keyboard teleop; tests T3, T4
+3. **Architecture design** ✅ — Node graph, topic contracts, tf2 frame tree (`docs/architecture.md`)
+4. **Teleoperation in sim** ✅ — T3+T4 passed 2026-03-05; GZ_IP+Fast-DDS fixes required
 5. **Obstacle avoidance** ❌ — Reactive node using `/scan`
 6. **SLAM + map building** ❌ — `slam_toolbox` online async; save map
 7. **Autonomous navigation** ❌ — Nav2; test T2
@@ -64,6 +65,32 @@ docker exec turtlebot3_simulator which gz     # exits 0 (Gazebo Harmonic)
 # Inside simulator container: build workspace
 docker exec turtlebot3_simulator bash /home/ros_user/ros2_ws/scripts/workspace.sh
 
+# Phase 4: launch sim headless (no display; required for docker exec testing)
+docker exec turtlebot3_simulator bash -c "
+  source ~/ros2_ws/install/setup.bash &&
+  ros2 launch tb3_bringup sim_bringup.launch.py headless:=true &"
+
+# Phase 4: launch sim with GUI (interactive; from attached terminal)
+# ros2 launch tb3_bringup sim_bringup.launch.py use_rviz:=true
+
+# T3 test gate: Gazebo world loads; /clock active
+docker exec turtlebot3_simulator bash -c "
+  source ~/ros2_ws/install/setup.bash &&
+  ros2 launch tb3_bringup sim_bringup.launch.py headless:=true &
+  sleep 15 && ros2 topic list | grep /clock"
+
+# T4 test gate: publish /cmd_vel; verify /odom changes
+docker exec turtlebot3_simulator bash -c "
+  source ~/ros2_ws/install/setup.bash &&
+  python3 ~/ros2_ws/scripts/test_t4.py"
+
+# Phase 4: keyboard teleop (MUST be from attached terminal — needs TTY)
+bash scripts/attach_terminal.sh turtlebot3_simulator
+# then inside: ros2 launch tb3_bringup teleop.launch.py
+
+# Phase 5+: teleop remapped so obstacle_avoidance_node can intercept
+# ros2 launch tb3_bringup teleop.launch.py cmd_vel_topic:=/cmd_vel_raw
+
 # Markdown lint (run before committing .md files)
 markdownlint-cli2 "**/*.md"
 markdownlint-cli2 --fix "**/*.md"
@@ -82,16 +109,26 @@ turtlebot3/
 │   ├── build.sh              # build both images
 │   ├── run_docker.sh         # start both containers (GPU auto-detect)
 │   ├── attach_terminal.sh    # attach shell to named container
-│   └── workspace.sh          # rosdep + colcon build (run inside container)
+│   ├── workspace.sh          # rosdep + colcon build (run inside container)
+│   └── test_t4.py            # T4 test: publish /cmd_vel, verify /odom changes (run inside container)
 ├── docker-compose.yml        # services: simulator, turtlebot (network_mode: host)
 ├── entrypoint.sh             # sources ROS + workspace on container startup
 ├── config/params.yaml        # TurtleBot3 node params
 ├── input/                    # raw author inputs (vision, prompts)
-├── docs/                     # reference documents
 ├── specification.md          # full project spec: architecture, phases, test criteria
 ├── development-plan.md       # living dev plan: phases, decisions log, risk register
+├── docs/
+│   └── architecture.md       # Phase 3 deliverable: node graph, topic contracts, tf2 frames
 └── src/                      # colcon workspace (host-mounted into both containers)
-    ├── tb3_bringup/          # launch files, configs, RViz (phase 4+)
+    ├── tb3_bringup/
+    │   ├── launch/
+    │   │   ├── sim_bringup.launch.py   # Gazebo Harmonic + TB3 + robot_state_publisher; headless:=true for tests
+    │   │   └── teleop.launch.py        # turtlebot3_teleop_keyboard; cmd_vel_topic arg for Ph5 remap
+    │   ├── config/
+    │   │   ├── gazebo_params.yaml      # use_sim_time: true (wildcard for all nodes)
+    │   │   └── bridge_params.yaml      # gz_ros2_bridge: /cmd_vel as Twist (not TwistStamped)
+    │   ├── rviz/teleop.rviz
+    │   └── worlds/tb3_sim.world        # embeds TB3 burger model directly (no spawner service needed)
     └── tb3_controller/       # velocity controller, obstacle avoidance node (phase 5+)
 ```
 
@@ -101,11 +138,9 @@ Invoke via the `Skill` tool or `/<skill-name>`:
 
 | Skill | Use When |
 |---|---|
-| `ros_devcontainer` | Docker/DevContainer setup, Dockerfile, docker-compose, GUI/VNC, GPU |
 | `ros_workspace` | Scaffold `ros2_ws/`, package layering, vcstool, rosdep, colcon config |
 | `ros_architect` | Node graph design, topic/service/action selection, tf2 frames, QoS, lifecycle |
 | `ros_package_node` | Create packages, Python (`rclpy`) or C++ (`rclcpp`) nodes, `package.xml`, build files |
-| `ros_topics_services_actions` | Implement pub/sub, services, actions, custom msg/srv/action definitions |
 | `ros_launch` | Python launch files, parameter loading, multi-node bringup, conditionals |
 | `ros_testing` | Unit tests (pytest/GTest), node integration tests, launch system tests |
 
@@ -134,3 +169,10 @@ Non-interactive; run via `docker exec`. pytest + JUnit XML output.
 - **`robotis/turtlebot3` tag**: `jazzy` tag does NOT exist. Use `jazzy-pc-latest` (dev/amd64) or `jazzy-sbc-latest` (RPi4/arm64).
 - **`gz` binary path**: not in standard PATH — at `/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz`. Both Dockerfiles add it via `ENV PATH`.
 - **Gazebo Harmonic**: use `gz sim` (not `gazebo`); `gz_ros2_control` bridge; `ros-jazzy-turtlebot3-gazebo` must have Harmonic-compatible worlds (risk R2).
+- **gz-sim 8.10 spawner removed**: `/world/default/create` service no longer exists in gz-sim 8.10. Embed the TB3 model directly in the world SDF (`worlds/tb3_sim.world`) instead of using `ros_gz_sim` spawner.
+- **`/cmd_vel` bridge type**: upstream `turtlebot3_gazebo` bridge uses `TwistStamped`; our `bridge_params.yaml` overrides to `geometry_msgs/msg/Twist` — required for `teleop_keyboard`, `obstacle_avoidance_node`, and Nav2.
+- **`teleop_keyboard` needs TTY**: `turtlebot3_teleop_keyboard` is interactive. Never launch via non-interactive `docker exec`. Use `bash scripts/attach_terminal.sh turtlebot3_simulator`, then run `ros2 launch tb3_bringup teleop.launch.py` from within that session.
+- **headless sim for testing**: pass `headless:=true` to `sim_bringup.launch.py` when launching via `docker exec` (no display). The gz sim server still runs and publishes `/clock`; only the GUI client is skipped.
+- **CycloneDDS hangs on hosts with many bridge/veth interfaces**: `rclpy.init()` blocks joining multicast groups. Switched to `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` (Fast-DDS). Both packages are installed in the image.
+- **gz-transport also uses multicast for discovery**: `GZ_IP=127.0.0.1` forces gz-transport to use loopback, fixing the bridge connection between Gazebo and `ros_gz_bridge`. Set in docker-compose.yml.
+- **`scripts/` is mounted into the container**: `./scripts` → `~/ros2_ws/scripts`. Run `test_t4.py` as `python3 ~/ros2_ws/scripts/test_t4.py` inside the container.
