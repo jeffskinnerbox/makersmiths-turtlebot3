@@ -1,23 +1,65 @@
-# Backups created by Claude Code
+#
+#   The build/, install/, and log/ Folders: These are generated every time you run colcon build.
+#   They are specific to your machine's architecture and should never be committed.
+#
+#   COLCON_IGNORE: Sometimes you have a package in your src folder that you don't want to build right now.
+#   This file tells the build system to skip it.
+#
+#   Bag Files (.mcap, .db3): If you record sensor data while testing your TurtleBot, these files can become massive very quickly.
+#   It's best to keep them out of Git.
+#
+
+
+# --- Backups created by Claude Code ---
 *.bak
 
-# Large binary docs (keep in local docs/ only)
+# --- Large binary docs (keep in local docs/ only) ---
 docs/*.pdf
 
-# Photos (large binaries, not needed in repo)
+# --- Photos (large binaries, not needed in repo) ---
 pictures/
 
-# ROS 2 colcon build artifacts (generated inside container, not on host)
+# --- ROS 2 Build Artifacts ---
 build/
 install/
 log/
 
-# Python
+# --- Python ---
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+.pytest_cache/
+.tox/
+.coverage
+.mypy_cache/
 
-# Editor
-.vscode/settings.json
+# --- C++ / Compiled Binaries ---
+*.so
+*.a
+*.o
+*.out
+
+# --- Colcon / Ament ---
+COLCON_IGNORE
+.ament_ignore
+
+# --- IDEs and Editors ---
+.vscode/
+.idea/
+.project
+.pydevproject
+.settings/
 *.swp
 *~
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+# --- Robotics Specific ---
+# Ignore large bag files (rosbags)
+*.mcap
+*.db3
+# Ignore Gazebo/Simulation logs
+~/.gazebo/log/
+*.log
