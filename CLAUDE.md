@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅ (T3+T4 passed 2026-03-05). Next: Phase 5 — obstacle avoidance.
+**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅ (T5 passed 2026-03-04). Next: Phase 6 — SLAM + map building.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 **Session-start protocol** — at the start of each work session:
@@ -30,7 +30,7 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 2. **Workspace scaffold** ✅ — `src/` packages, rosdep, colcon config (2026-03-03)
 3. **Architecture design** ✅ — Node graph, topic contracts, tf2 frame tree (`docs/architecture.md`)
 4. **Teleoperation in sim** ✅ — T3+T4 passed 2026-03-05; GZ_IP+Fast-DDS fixes required
-5. **Obstacle avoidance** ❌ — Reactive node using `/scan`
+5. **Obstacle avoidance** ✅ — Reactive node using `/scan`; T5 passed 2026-03-04
 6. **SLAM + map building** ❌ — `slam_toolbox` online async; save map
 7. **Autonomous navigation** ❌ — Nav2; test T2
 8. **Automated tests** ❌ — T1–T4 pytest suite; JUnit XML
@@ -41,7 +41,7 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 
 - User: `ros_user` (UID 1000; `ubuntu` user removed in Dockerfile)
 - Workspace: `/home/ros_user/ros2_ws`; host `src/` mounted to `ros2_ws/src`
-- `TURTLEBOT3_MODEL=burger`, `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`, `ROS_DOMAIN_ID=0`
+- `TURTLEBOT3_MODEL=burger`, `RMW_IMPLEMENTATION=rmw_fastrtps_cpp`, `ROS_DOMAIN_ID=0`
 
 ### Key Commands
 
@@ -88,7 +88,12 @@ docker exec turtlebot3_simulator bash -c "
 bash scripts/attach_terminal.sh turtlebot3_simulator
 # then inside: ros2 launch tb3_bringup teleop.launch.py
 
-# Phase 5+: teleop remapped so obstacle_avoidance_node can intercept
+# Phase 5: run obstacle avoidance (after sim_bringup)
+# docker exec -d turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 launch tb3_bringup obstacle_avoidance.launch.py"
+# T5 test gate (run after sim + obstacle node are up):
+# docker cp scripts/test_t5.py turtlebot3_simulator:/tmp/test_t5.py
+# docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && python3 /tmp/test_t5.py"
+# Teleop remapped so obstacle_avoidance_node intercepts /cmd_vel_raw → /cmd_vel:
 # ros2 launch tb3_bringup teleop.launch.py cmd_vel_topic:=/cmd_vel_raw
 
 # Markdown lint (run before committing .md files)
@@ -128,8 +133,11 @@ turtlebot3/
     │   │   ├── gazebo_params.yaml      # use_sim_time: true (wildcard for all nodes)
     │   │   └── bridge_params.yaml      # gz_ros2_bridge: /cmd_vel as Twist (not TwistStamped)
     │   ├── rviz/teleop.rviz
-    │   └── worlds/tb3_sim.world        # embeds TB3 burger model directly (no spawner service needed)
-    └── tb3_controller/       # velocity controller, obstacle avoidance node (phase 5+)
+    │   │   └── obstacle_avoidance.launch.py  # launches obstacle_avoidance_node
+│   └── worlds/tb3_sim.world        # embeds TB3 burger model directly (no spawner service needed)
+    └── tb3_controller/
+        ├── tb3_controller/obstacle_avoidance_node.py  # sub /scan + /cmd_vel_raw; pub /cmd_vel; blocks fwd if obstacle
+        └── config/obstacle_params.yaml                # threshold_m, front_arc_deg
 ```
 
 ## Skill Library (`.claude/skills/`)
@@ -175,4 +183,5 @@ Non-interactive; run via `docker exec`. pytest + JUnit XML output.
 - **headless sim for testing**: pass `headless:=true` to `sim_bringup.launch.py` when launching via `docker exec` (no display). The gz sim server still runs and publishes `/clock`; only the GUI client is skipped.
 - **CycloneDDS hangs on hosts with many bridge/veth interfaces**: `rclpy.init()` blocks joining multicast groups. Switched to `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` (Fast-DDS). Both packages are installed in the image.
 - **gz-transport also uses multicast for discovery**: `GZ_IP=127.0.0.1` forces gz-transport to use loopback, fixing the bridge connection between Gazebo and `ros_gz_bridge`. Set in docker-compose.yml.
-- **`scripts/` is mounted into the container**: `./scripts` → `~/ros2_ws/scripts`. Run `test_t4.py` as `python3 ~/ros2_ws/scripts/test_t4.py` inside the container.
+- **`scripts/` is mounted into the container**: `./scripts` → `~/ros2_ws/scripts`. Run `test_t4.py` as `python3 ~/ros2_ws/scripts/test_t4.py` inside the container. If the container predates the mount (e.g., started before that volume line was added), use `docker cp` instead.
+- **`ros2` CLI breaks when only workspace setup is sourced**: Always source both — `source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash` — before running `ros2 node list`, `ros2 topic echo`, etc. Sourcing only the workspace overlay causes `importlib.metadata.PackageNotFoundError: ros2cli`.

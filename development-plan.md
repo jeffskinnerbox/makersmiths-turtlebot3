@@ -325,7 +325,7 @@ docker exec turtlebot3_simulator bash -c "
 
 ---
 
-### Phase 5 — Obstacle avoidance
+### Phase 5 — Obstacle avoidance ✅
 
 **Goal**: Robot reactively slows and stops when LiDAR detects an obstacle within threshold distance.
 Implemented as a standalone node before full Nav2 (simpler, testable in isolation).
@@ -336,26 +336,30 @@ Implemented as a standalone node before full Nav2 (simpler, testable in isolatio
 
 ```text
 tb3_controller/
-  tb3_controller/obstacle_avoidance_node.py
-    ← subscribes /scan; publishes /cmd_vel; stops if min_range < threshold
-  tb3_controller/config/obstacle_params.yaml
+  tb3_controller/obstacle_avoidance_node.py  ← ✅ created 2026-03-04
+    ← subscribes /scan + /cmd_vel_raw; publishes /cmd_vel; zeros linear.x if obstacle < threshold
+  tb3_controller/config/obstacle_params.yaml ← ✅ created 2026-03-04
 tb3_bringup/launch/
-  obstacle_avoidance.launch.py
+  obstacle_avoidance.launch.py               ← ✅ created 2026-03-04
+scripts/
+  test_t5.py                                 ← ✅ created 2026-03-04
 ```
 
-**Test gate**:
+**Node design**: Sits between teleop and robot. Subscribes `/cmd_vel_raw` (from teleop, remapped
+away from `/cmd_vel`), checks forward arc of `/scan` against threshold (default 0.35 m),
+zeros `linear.x` if blocked, and publishes to `/cmd_vel`. Reverse always passes through.
+
+**Test gate** ✅ passed 2026-03-04:
 
 ```bash
-# Place a wall model in Gazebo near the robot, run obstacle node,
-# publish forward velocity, verify robot stops before collision.
-docker exec turtlebot3_simulator bash -c "
-  source ~/ros2_ws/install/setup.bash &&
-  ros2 topic echo --once /scan | python3 -c \"
-import sys, json
-data = sys.stdin.read()
-assert 'ranges' in data, 'No scan data'
-print('PASS: /scan publishing')
-\""
+# Start sim headless (see Phase 4)
+docker exec -d turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 launch tb3_bringup sim_bringup.launch.py headless:=true"
+# Start obstacle node
+docker exec -d turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 launch tb3_bringup obstacle_avoidance.launch.py"
+# Run T5 test
+docker cp scripts/test_t5.py turtlebot3_simulator:/tmp/test_t5.py
+docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && python3 /tmp/test_t5.py"
+# Output: T5_PASS
 ```
 
 ---
