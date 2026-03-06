@@ -33,7 +33,7 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 4. **Teleoperation in sim** ✅ — T3+T4 passed 2026-03-05; GZ_IP+Fast-DDS fixes required
 5. **Obstacle avoidance** ✅ — Reactive node using `/scan`; T5 passed 2026-03-04
 6. **SLAM + map building** ✅ — `slam_toolbox` online async; T6 passed 2026-03-04
-7. **Autonomous navigation** ❌ — Nav2; test T2
+7. **Autonomous navigation** ✅ — Nav2; T7 passed 2026-03-06
 8. **Automated tests** ❌ — T1–T4 pytest suite; JUnit XML
 9. **Operational documentation** ❌ — `docs/operations.md` for sim environment
 10. **Hardware load** ❌ — Ubuntu 24.04 + Docker on Raspberry Pi 4; arm64 image

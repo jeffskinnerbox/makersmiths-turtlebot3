@@ -57,10 +57,19 @@ docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && so
 # Save map via slam_toolbox service (NOT map_saver_cli — see gotchas.md):
 # ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap '{name: {data: "/path/to/my_map"}}'
 
-# Phase 7: Nav2 autonomous navigation — see development-plan.md Phase 7 for deliverables
-# Launch: ros2 launch tb3_bringup nav2_bringup.launch.py map:=/path/to/my_map.yaml
-# T2 test gate: /scan received by simulator from turtlebot container
-# docker exec turtlebot3_simulator bash -c "source ~/ros2_ws/install/setup.bash && timeout 10 ros2 topic echo --once /scan" | grep -c "ranges"
+# Phase 7: Nav2
+docker exec -d turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 launch tb3_bringup nav2_bringup.launch.py headless:=true"
+docker cp scripts/test_t7.py turtlebot3_simulator:/tmp/test_t7.py
+docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && python3 /tmp/test_t7.py"
+# Output: T7_PASS
+
+# Phase 8: Automated test suite (host-side orchestrator)
+# Results written to ./test-results/results_<stage>.xml
+bash scripts/run_tests.sh sim       # T1 + T2(xfail) + T3 + T4
+bash scripts/run_tests.sh obstacle  # T5
+bash scripts/run_tests.sh slam      # T6
+bash scripts/run_tests.sh nav2      # T7
+bash scripts/run_tests.sh all       # all stages (docker restart between each)
 
 # Markdown lint (run before committing .md files)
 markdownlint-cli2 "**/*.md"

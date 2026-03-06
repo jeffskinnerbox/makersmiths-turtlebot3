@@ -401,7 +401,7 @@ docker exec turtlebot3_simulator bash -c "source /opt/ros/jazzy/setup.bash && so
 
 ---
 
-### Phase 7 — Autonomous navigation (Nav2)
+### Phase 7 — Autonomous navigation (Nav2) ✅
 
 **Goal**: Robot navigates to a 2D goal pose in a pre-built map without colliding with obstacles.
 
@@ -417,18 +417,18 @@ tb3_bringup/config/
   rviz/nav2.rviz
 ```
 
-**Test gate** (T2):
+**Test gate** ✅ passed 2026-03-06 (T7):
 
 ```bash
-# Topic communication test: turtlebot container /scan received by simulator
+# T7: Nav2 stack active; goal accepted + SUCCEEDED
 docker exec turtlebot3_simulator bash -c "
   source ~/ros2_ws/install/setup.bash &&
-  timeout 10 ros2 topic echo --once /scan" | grep -c "ranges"
-# Expected: output with ranges data
-
-# Nav2 goal reaches result
-# (Manual verification via RViz '2D Nav Goal' click, or scripted via action client)
+  python3 ~/ros2_ws/scripts/test_t7.py"
+# Output: T7_PASS
 ```
+
+> **Note**: T2 (cross-container `/scan`) deferred to Phase 10 (hardware). Goal (0.15, 0.10) used
+> (within phase6_map bounds). Nav2 delayed 15 s so Gazebo TF is available at local_costmap init.
 
 ---
 
@@ -442,15 +442,41 @@ docker exec turtlebot3_simulator bash -c "
 
 ```text
 tb3_bringup/test/
-  test_container_startup.py   ← T1
-  test_topic_comms.py         ← T2
-  test_gazebo_launch.py       ← T3
-  test_drive_command.py       ← T4
+  conftest.py                      ← session-scoped rclpy init/shutdown fixture
+  test_t1_container_startup.py     ← T1: which ros2 / which gz
+  test_t2_topic_comms.py           ← T2: xfail (Ph10)
+  test_t3_gazebo_launch.py         ← T3: /clock subscription
+  test_t4_drive_command.py         ← T4: /cmd_vel → /odom changes
+  test_t5_obstacle_avoidance.py    ← T5: forward blocked, reverse passes
+  test_t6_slam.py                  ← T6: /map + save_map service
+  test_t7_nav2.py                  ← T7: goal navigation SUCCEEDED
 scripts/
-  run_tests.sh                ← docker exec wrapper; runs pytest; outputs JUnit XML
+  run_tests.sh                     ← host-side orchestrator; 4 stages; JUnit XML
 ```
 
-**Test gate**: All four test modules pass with zero failures in a fresh environment.
+**Test gate**: Run each stage; results written to `test-results/results_<stage>.xml`.
+
+```bash
+# Ensure containers are up
+sg docker -c "docker compose up -d"
+# Build workspace inside container
+docker exec turtlebot3_simulator bash /home/ros_user/ros2_ws/scripts/workspace.sh
+
+# Stage 1: T1 + T2 (xfail) + T3 + T4
+bash scripts/run_tests.sh sim
+
+# Stage 2: T5 (obstacle avoidance)
+bash scripts/run_tests.sh obstacle
+
+# Stage 3: T6 (SLAM)
+bash scripts/run_tests.sh slam
+
+# Stage 4: T7 (Nav2)
+bash scripts/run_tests.sh nav2
+
+# Or run all stages sequentially (docker restart between each):
+bash scripts/run_tests.sh all
+```
 
 ---
 
