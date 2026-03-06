@@ -29,6 +29,7 @@ import time
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav2_msgs.action import NavigateToPose
@@ -36,8 +37,11 @@ from geometry_msgs.msg import PoseStamped
 
 
 TIMEOUT_S = 60.0
-GOAL_X = 0.5   # metres forward in map frame — should be free space in phase6 map
-GOAL_Y = 0.0
+# phase6_map is 12x12 cells @ 0.05 m, origin (-0.319, -0.010)
+# map bounds: x [-0.319, 0.281], y [-0.010, 0.590]
+# Robot starts at (0, 0); goal must be within map bounds
+GOAL_X = 0.15
+GOAL_Y = 0.10
 
 
 class Nav2Tester(Node):
@@ -48,10 +52,20 @@ class Nav2Tester(Node):
         self.map_width = 0
         self.map_height = 0
 
+        map_qos = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+        )
         self.map_sub = self.create_subscription(
-            OccupancyGrid, '/map', self._map_cb, 1)
+            OccupancyGrid, '/map', self._map_cb, map_qos)
+        amcl_qos = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+        )
         self.amcl_sub = self.create_subscription(
-            PoseWithCovarianceStamped, '/amcl_pose', self._amcl_cb, 1)
+            PoseWithCovarianceStamped, '/amcl_pose', self._amcl_cb, amcl_qos)
         self.nav_client = ActionClient(self, NavigateToPose, '/navigate_to_pose')
 
     def _map_cb(self, msg):

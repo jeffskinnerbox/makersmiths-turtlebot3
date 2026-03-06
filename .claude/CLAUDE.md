@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅ (T6 passed 2026-03-04). Next: Phase 7 — autonomous navigation (Nav2).
+**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅, Phase 7 ✅ (T7 passed 2026-03-06). Next: Phase 8 — automated test suite.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 **Session-start protocol** — at the start of each work session:
@@ -89,6 +89,7 @@ turtlebot3/
 │   ├── test_t4.py            # T4: publish /cmd_vel, verify /odom changes
 │   ├── test_t5.py            # T5: verify obstacle_avoidance_node blocks fwd motion
 │   ├── test_t6.py            # T6: verify /map published by slam_toolbox
+│   ├── test_t7.py            # T7: verify Nav2 stack up + goal navigation succeeds
 │   └── drive_circle.py       # drive robot in circle to build SLAM map (15 s)
 ├── docker-compose.yml        # services: simulator, turtlebot (network_mode: host)
 ├── entrypoint.sh             # sources ROS + workspace on container startup
@@ -128,11 +129,12 @@ Non-interactive; run via `docker exec`. pytest + JUnit XML output.
 | ID | Test | Pass Criteria | Status |
 |----|------|---------------|--------|
 | T1 | Container startup | Both containers start; `which ros2` exits 0 | ✅ |
-| T2 | Topic comms | `/scan` published by turtlebot, received by simulator | ❌ Ph7 |
+| T2 | Topic comms | `/scan` published by turtlebot, received by simulator | ❌ Ph10 |
 | T3 | Gazebo launch | TB3 world loads; `/clock` active | ✅ |
 | T4 | Drive command | Publish `Twist` to `/cmd_vel`; `/odom` changes | ✅ |
 | T5 | Obstacle avoidance | `obstacle_avoidance_node` zeros `linear.x` when `/scan` < threshold | ✅ |
 | T6 | SLAM map building | `/map` published by `slam_toolbox`; non-empty after robot moves | ✅ |
+| T7 | Autonomous navigation | Nav2 stack active; goal accepted + SUCCEEDED | ✅ |
 
 
 ## Git Commitment Guidelines
@@ -166,3 +168,7 @@ See `.claude/rules/gotchas.md` for the full list. Critical highlights:
 - **Map save path must be outside `src/`**: saving to `/home/ros_user/ros2_ws/src/...` inside the container returns result=255. Save to `~/` then `cp` to `src/tb3_bringup/config/maps/`.
 - **headless sim**: pass `headless:=true` to `sim_bringup.launch.py` in all `docker exec` test commands.
 - **`slam.launch.py` docstring is wrong**: it says `map_saver_cli` — ignore it; use the slam_toolbox service as noted above.
+- **Nav2 needs single clean Gazebo instance**: multiple lingering `gz sim` processes from prior launches corrupt TF and clock. Always `docker restart turtlebot3_simulator` before running nav2_bringup tests.
+- **Nav2 15s delayed start**: `nav2_bringup.launch.py` delays Nav2 by 15s so Gazebo TF is available when local_costmap activates.
+- **Nav2 map/amcl_pose QoS**: both `/map` and `/amcl_pose` are TRANSIENT_LOCAL RELIABLE — subscribers must match or miss the latched message.
+- **Nav2 goal must be within map bounds**: phase6_map is 12x12 cells @ 0.05m, origin (-0.319, -0.010); max x ≈ 0.28m. Goal (0.15, 0.10) works; (0.5, 0.0) is out of bounds.

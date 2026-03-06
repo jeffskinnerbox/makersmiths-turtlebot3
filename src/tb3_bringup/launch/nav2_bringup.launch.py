@@ -31,7 +31,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -93,6 +93,11 @@ def generate_launch_description():
         condition=IfCondition(use_rviz),
     )
 
+    # Delay Nav2 startup so Gazebo + bridge have time to publish TF frames
+    # (base_footprint→odom transform must exist before local_costmap activates)
+    nav2_delayed = TimerAction(period=15.0, actions=[nav2_bringup])
+    rviz_delayed = TimerAction(period=15.0, actions=[rviz_node])
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time', default_value='true',
@@ -113,6 +118,6 @@ def generate_launch_description():
             'autostart', default_value='true',
             description='Automatically start Nav2 lifecycle nodes'),
         sim_bringup,
-        nav2_bringup,
-        rviz_node,
+        nav2_delayed,
+        rviz_delayed,
     ])
