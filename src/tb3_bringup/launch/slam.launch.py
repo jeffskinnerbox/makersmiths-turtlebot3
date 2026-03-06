@@ -15,8 +15,9 @@ Drive the robot with teleop to build the map:
   ros2 launch tb3_bringup teleop.launch.py cmd_vel_topic:=/cmd_vel_raw
   (obstacle_avoidance_node also keeps it safe — launch obstacle_avoidance.launch.py first)
 
-Save the map when done:
-  ros2 run nav2_map_server map_saver_cli -f ~/ros2_ws/src/tb3_bringup/config/maps/my_map
+Save the map when done (map_saver_cli fails with QoS mismatch — use the service):
+  ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap '{name: {data: "/home/ros_user/my_map"}}'
+  # then: cp ~/my_map.pgm ~/my_map.yaml ~/ros2_ws/src/tb3_bringup/config/maps/
 """
 
 import os

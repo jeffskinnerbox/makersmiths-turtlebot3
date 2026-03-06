@@ -88,7 +88,8 @@ turtlebot3/
 │   ├── workspace.sh          # rosdep + colcon build (run inside container)
 │   ├── test_t4.py            # T4: publish /cmd_vel, verify /odom changes
 │   ├── test_t5.py            # T5: verify obstacle_avoidance_node blocks fwd motion
-│   └── test_t6.py            # T6: verify /map published by slam_toolbox
+│   ├── test_t6.py            # T6: verify /map published by slam_toolbox
+│   └── drive_circle.py       # drive robot in circle to build SLAM map (15 s)
 ├── docker-compose.yml        # services: simulator, turtlebot (network_mode: host)
 ├── entrypoint.sh             # sources ROS + workspace on container startup
 ├── config/params.yaml        # TurtleBot3 node params
@@ -162,4 +163,6 @@ See `.claude/rules/gotchas.md` for the full list. Critical highlights:
 - **Always source both setups**: `source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash` — workspace-only source breaks `ros2` CLI.
 - **`teleop_keyboard` needs TTY**: launch via `bash scripts/attach_terminal.sh turtlebot3_simulator`, not `docker exec`.
 - **Map saving**: use `ros2 service call /slam_toolbox/save_map ...` — `map_saver_cli` fails due to QoS mismatch.
+- **Map save path must be outside `src/`**: saving to `/home/ros_user/ros2_ws/src/...` inside the container returns result=255. Save to `~/` then `cp` to `src/tb3_bringup/config/maps/`.
 - **headless sim**: pass `headless:=true` to `sim_bringup.launch.py` in all `docker exec` test commands.
+- **`slam.launch.py` docstring is wrong**: it says `map_saver_cli` — ignore it; use the slam_toolbox service as noted above.
