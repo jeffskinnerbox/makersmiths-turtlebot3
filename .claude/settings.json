@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "LS",
+      "Glob",
+      "WebSearch",
+      "WebFetch",
+      "Bash(cp -f *)",
+      "Bash(markdownlint-cli2 *)",
+      "Bash(sg docker -c *)",
+      "Bash(docker exec *)",
+      "Bash(colcon build*)",
+      "Bash(source /opt/ros/jazzy/setup.bash*)",
+      "Bash(ros2 pkg*)",
+      "Bash(pytest*)",
+      "Bash(python3 -m flake8*)",
+      "Bash(black *)",
+      "Bash(git status)",
+      "Bash(git add *)",
+      "Bash(git commit -m *)",
+      "Bash(git diff*)",
+      "Bash(git branch*)",
+      "Bash(git checkout -b *)",
+      "Bash(git push *)",
+      "Bash(git pull *)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  }
+}

@@ -15,7 +15,7 @@ Use these additional sources to expand your ROS2 / Docker skill further:
 * [The Complete Guide to Docker for ROS 2 Jazzy Projects — Automatic Addison](https://automaticaddison.com/the-complete-guide-to-docker-for-ros-2-jazzy-projects/)
 * [The Complete Beginner's Guide to Using Docker for ROS 2 Deployment (2025) — RobotAir](https://blog.robotair.io/the-complete-beginners-guide-to-using-docker-for-ros-2-deployment-2025-edition-0f259ca8b378)
 * [Introduction to ROS 2 Development with Docker](https://docs.docker.com/guides/ros2/)
-With the body of the SKILL.md file, reference the above sources.
+Within the body of the SKILL.md file, reference the above sources.
 
 The skill should also create bash scripts and ROS2 launch scripts
 that assist the user in the configuration and operation of the devcontainer.
@@ -72,6 +72,12 @@ and use this information to guide the creation of the ROS 2 devcontainer:
 ## Creation of the Specification Document
 ### 2nd Claude Code Prompt
 Read @docs/my-vision.md and create a specification document @specification.md.
+
+Within the specification document you create, include this prompt,
+all question you ask me, along with my responses.
+Place this in an appendix and reference it at the beginning of the specification document
+and anywhere else in the text when its a useful reference.
+
 In a subsequent phase, I need this this specification document to help prepare a detailed development plan.
 Think Hard about what must be specified in the specification document so a robust development plan can be created.
 
@@ -90,7 +96,7 @@ key technical decisions to resolve upfront (e.g., which Python library to use),
 a rough phasing that mirrors the sequence reflected in @input/my-vision.md and @specification.md,
 and any external dependencies or risks (like software version mismatch).
 
-Produce the plan as a living document it can update as the project evolves,
+Produce the plan as a living document so it can update as the project evolves,
 not just a one-time artifact.
 I want it to serves as an ongoing reference rather than going stale after the first few sessions.
 Given the scope of this project — raspberry pi software, a simulator on desktop computer, and incremental testing —
