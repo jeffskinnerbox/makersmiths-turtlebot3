@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅, Phase 7 ✅ (T7 passed 2026-03-06). Next: Phase 8 — automated test suite.
+**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅, Phase 7 ✅ (T7 passed 2026-03-06), Phase 8 🔧 (suite built; test gate pending). Next: run `bash scripts/run_tests.sh all`.
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 **Session-start protocol** — at the start of each work session:
@@ -34,7 +34,7 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 5. **Obstacle avoidance** ✅ — Reactive node using `/scan`; T5 passed 2026-03-04
 6. **SLAM + map building** ✅ — `slam_toolbox` online async; T6 passed 2026-03-04
 7. **Autonomous navigation** ✅ — Nav2; T7 passed 2026-03-06
-8. **Automated tests** ❌ — T1–T4 pytest suite; JUnit XML
+8. **Automated tests** 🔧 — pytest suite built (T1–T7 + T2 xfail); test gate pending
 9. **Operational documentation** ❌ — `docs/operations.md` for sim environment
 10. **Hardware load** ❌ — Ubuntu 24.04 + Docker on Raspberry Pi 4; arm64 image
 
@@ -61,6 +61,14 @@ bash scripts/attach_terminal.sh turtlebot3_simulator
 # Build workspace inside simulator container
 docker exec turtlebot3_simulator bash /home/ros_user/ros2_ws/scripts/workspace.sh
 
+# Run automated test suite (Phase 8) — host-side; manages docker restart + JUnit XML
+bash scripts/run_tests.sh all          # all stages
+bash scripts/run_tests.sh sim          # T1+T2(xfail)+T3+T4 only
+bash scripts/run_tests.sh obstacle     # T5 only
+bash scripts/run_tests.sh slam         # T6 only
+bash scripts/run_tests.sh nav2         # T7 only
+# Results: ./test-results/results_<stage>.xml
+
 # Markdown lint (run before committing .md files)
 markdownlint-cli2 "**/*.md"
 markdownlint-cli2 --fix "**/*.md"
@@ -86,10 +94,11 @@ turtlebot3/
 │   ├── run_docker.sh         # start both containers (GPU auto-detect)
 │   ├── attach_terminal.sh    # attach shell to named container
 │   ├── workspace.sh          # rosdep + colcon build (run inside container)
-│   ├── test_t4.py            # T4: publish /cmd_vel, verify /odom changes
-│   ├── test_t5.py            # T5: verify obstacle_avoidance_node blocks fwd motion
-│   ├── test_t6.py            # T6: verify /map published by slam_toolbox
-│   ├── test_t7.py            # T7: verify Nav2 stack up + goal navigation succeeds
+│   ├── test_t4.py            # T4 standalone script (legacy; pytest version in tb3_bringup/test/)
+│   ├── test_t5.py            # T5 standalone script
+│   ├── test_t6.py            # T6 standalone script
+│   ├── test_t7.py            # T7 standalone script
+│   ├── run_tests.sh          # [Ph8] host-side orchestrator: docker restart → stack → pytest → XML
 │   └── drive_circle.py       # drive robot in circle to build SLAM map (15 s)
 ├── docker-compose.yml        # services: simulator, turtlebot (network_mode: host)
 ├── entrypoint.sh             # sources ROS + workspace on container startup
@@ -116,7 +125,16 @@ turtlebot3/
     │   ├── rviz/
     │   │   ├── teleop.rviz
     │   │   └── nav2.rviz                     # [Ph7]
-    │   └── worlds/tb3_sim.world              # embeds TB3 burger model directly (no spawner service needed)
+│   ├── test/
+│   │   ├── conftest.py                  # [Ph8] session-scoped rclpy init/shutdown fixture
+│   │   ├── test_t1_container_startup.py # [Ph8] which ros2/gz
+│   │   ├── test_t2_topic_comms.py       # [Ph8] xfail (Ph10)
+│   │   ├── test_t3_gazebo_launch.py     # [Ph8] /clock subscription
+│   │   ├── test_t4_drive_command.py     # [Ph8] /cmd_vel → /odom
+│   │   ├── test_t5_obstacle_avoidance.py# [Ph8] forward blocked, reverse passes
+│   │   ├── test_t6_slam.py              # [Ph8] /map + save_map service
+│   │   └── test_t7_nav2.py             # [Ph8] goal SUCCEEDED
+│   └── worlds/tb3_sim.world              # embeds TB3 burger model directly (no spawner service needed)
     └── tb3_controller/
         ├── tb3_controller/obstacle_avoidance_node.py  # sub /scan + /cmd_vel_raw; pub /cmd_vel; blocks fwd if obstacle
         └── config/obstacle_params.yaml                # threshold_m, front_arc_deg
