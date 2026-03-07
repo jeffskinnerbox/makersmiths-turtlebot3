@@ -5,7 +5,12 @@
 # the appropriate ROS 2 stack → run pytest → copy JUnit XML results to host.
 #
 # Usage (from repo root):
-#   bash scripts/run_tests.sh [sim|obstacle|slam|nav2|all]
+#   bash scripts/run_tests.sh [sim|obstacle|slam|nav2|all] [--gui]
+#
+# Options:
+#   --gui   Launch Gazebo with its GUI client visible on the host display.
+#           Requires: xhost +local:docker (run once per login on the host).
+#           Without --gui, all stages run headless (default; safe for CI).
 #
 # Stages:
 #   sim      — sim_bringup headless → T1, T2, T3, T4
@@ -25,8 +30,25 @@ set -euo pipefail
 
 CONTAINER="turtlebot3_simulator"
 RESULTS_DIR="${PWD}/test-results"
-STAGE="${1:-all}"
 TEST_DIR="src/tb3_bringup/test"
+
+# Parse args: positional = stage, --gui = show Gazebo GUI
+STAGE="all"
+GUI=false
+for arg in "$@"; do
+    case "$arg" in
+        --gui) GUI=true ;;
+        *)     STAGE="$arg" ;;
+    esac
+done
+
+# headless:=false → gz sim client (GUI) is launched; requires xhost +local:docker
+HEADLESS_ARG="headless:=true"
+if [[ "$GUI" == "true" ]]; then
+    HEADLESS_ARG="headless:=false"
+    echo "==> GUI mode: Gazebo client will open on host display (DISPLAY=${DISPLAY:-unset})"
+    echo "==> Ensure you have run: xhost +local:docker"
+fi
 
 mkdir -p "$RESULTS_DIR"
 
@@ -86,7 +108,7 @@ run_pytest() {
 
 stage_sim() {
     restart_container
-    start_bg "ros2 launch tb3_bringup sim_bringup.launch.py headless:=true" 20
+    start_bg "ros2 launch tb3_bringup sim_bringup.launch.py $HEADLESS_ARG" 20
     run_pytest "sim" \
         "$TEST_DIR/test_t1_container_startup.py" \
         "$TEST_DIR/test_t2_topic_comms.py" \
@@ -96,21 +118,21 @@ stage_sim() {
 
 stage_obstacle() {
     restart_container
-    start_bg "ros2 launch tb3_bringup sim_bringup.launch.py headless:=true" 20
+    start_bg "ros2 launch tb3_bringup sim_bringup.launch.py $HEADLESS_ARG" 20
     start_bg "ros2 launch tb3_bringup obstacle_avoidance.launch.py" 5
     run_pytest "obstacle" "$TEST_DIR/test_t5_obstacle_avoidance.py"
 }
 
 stage_slam() {
     restart_container
-    start_bg "ros2 launch tb3_bringup slam.launch.py headless:=true" 30
+    start_bg "ros2 launch tb3_bringup slam.launch.py $HEADLESS_ARG" 30
     run_pytest "slam" "$TEST_DIR/test_t6_slam.py"
 }
 
 stage_nav2() {
     restart_container
     # nav2_bringup delays Nav2 by 15 s internally; allow extra wall-clock time
-    start_bg "ros2 launch tb3_bringup nav2_bringup.launch.py headless:=true" 35
+    start_bg "ros2 launch tb3_bringup nav2_bringup.launch.py $HEADLESS_ARG" 35
     run_pytest "nav2" "$TEST_DIR/test_t7_nav2.py"
 }
 
