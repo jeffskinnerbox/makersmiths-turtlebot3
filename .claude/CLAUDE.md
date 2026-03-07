@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Reviving a **TurtleBot3 Burger** (Raspberry Pi 4, 4 GB) at Makersmiths using **ROS 2 Jazzy Jalisco** in Docker DevContainers.
 See `input/my-vision.md` for full context.
 
-**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅, Phase 7 ✅ (T7 passed 2026-03-06), Phase 8 🔧 (suite built; test gate pending). Next: run `bash scripts/run_tests.sh all`.
+**Current status**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅, Phase 7 ✅ (T7 passed 2026-03-06), Phase 8 ✅ (12 passed, 1 xfailed 2026-03-06). Next: Phase 9 — operational docs (`docs/operations.md`).
 See [`development-plan.md`](development-plan.md) for full phase plan and living decisions log.
 
 **Session-start protocol** — at the start of each work session:
@@ -34,7 +34,7 @@ Containers communicate over a shared Docker network. The `turtlebot` container r
 5. **Obstacle avoidance** ✅ — Reactive node using `/scan`; T5 passed 2026-03-04
 6. **SLAM + map building** ✅ — `slam_toolbox` online async; T6 passed 2026-03-04
 7. **Autonomous navigation** ✅ — Nav2; T7 passed 2026-03-06
-8. **Automated tests** 🔧 — pytest suite built (T1–T7 + T2 xfail); test gate pending
+8. **Automated tests** ✅ — 12 passed, 1 xfailed (T2 deferred Ph10); 2026-03-06
 9. **Operational documentation** ❌ — `docs/operations.md` for sim environment
 10. **Hardware load** ❌ — Ubuntu 24.04 + Docker on Raspberry Pi 4; arm64 image
 
