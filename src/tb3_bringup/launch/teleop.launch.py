@@ -1,9 +1,12 @@
 """
 teleop.launch.py — Phase 4
 
-Starts turtlebot3_teleop_keyboard for driving the robot with WASD/arrow keys.
+Drives the robot interactively using teleop_twist_keyboard (publishes Twist).
 
-IMPORTANT: turtlebot3_teleop_keyboard requires an interactive TTY.
+NOTE: turtlebot3_teleop v2.3.6 hardcodes TwistStamped; our ros_gz_bridge
+expects Twist. Use teleop_twist_keyboard instead (publishes Twist directly).
+
+IMPORTANT: requires an interactive TTY.
 Run this from an attached terminal, NOT via `docker exec ... bash -c "..."`.
 
   # Attach to the simulator container first:
@@ -11,8 +14,13 @@ Run this from an attached terminal, NOT via `docker exec ... bash -c "..."`.
   # Then inside the container:
   ros2 launch tb3_bringup teleop.launch.py
 
+  # Or run directly (no launch needed):
+  ros2 run teleop_twist_keyboard teleop_twist_keyboard
+
+Controls: i=forward, ,=backward, j=turn-left, l=turn-right, k=stop
+
 Phase 4: publishes directly to /cmd_vel.
-Phase 5+: will remap to /cmd_vel_raw (filtered by obstacle_avoidance_node).
+Phase 5+: remap to /cmd_vel_raw (filtered by obstacle_avoidance_node).
   ros2 launch tb3_bringup teleop.launch.py cmd_vel_topic:=/cmd_vel_raw
 """
 
@@ -26,8 +34,8 @@ def generate_launch_description():
     cmd_vel_topic = LaunchConfiguration('cmd_vel_topic')
 
     teleop_node = Node(
-        package='turtlebot3_teleop',
-        executable='teleop_keyboard',
+        package='teleop_twist_keyboard',
+        executable='teleop_twist_keyboard',
         name='teleop_keyboard',
         output='screen',
         remappings=[('/cmd_vel', cmd_vel_topic)],
