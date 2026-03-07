@@ -31,8 +31,10 @@ bash scripts/attach_terminal.sh turtlebot3_simulator
 docker exec turtlebot3_simulator bash /home/ros_user/ros2_ws/scripts/workspace.sh
 
 # Run full test suite (host-side; manages docker restart + JUnit XML output)
-bash scripts/run_tests.sh all
+bash scripts/run_tests.sh all                      # headless (CI-safe)
+bash scripts/run_tests.sh all --gui                # with Gazebo GUI on host display
 bash scripts/run_tests.sh sim|obstacle|slam|nav2   # individual stages
+# --gui requires: xhost +local:docker (once per login)
 
 # Markdown lint
 markdownlint-cli2 "**/*.md"
@@ -61,7 +63,7 @@ Nav2 publishes directly to `/cmd_vel`; do **not** run `obstacle_avoidance.launch
 | Launch file | What it starts |
 |---|---|
 | `sim_bringup.launch.py` | Gazebo Harmonic + TB3 world + `robot_state_publisher` + `ros_gz_bridge` |
-| `teleop.launch.py` | `turtlebot3_teleop_keyboard` (needs TTY) |
+| `teleop.launch.py` | `teleop_twist_keyboard` (needs TTY; use `i/,/j/l` keys) |
 | `obstacle_avoidance.launch.py` | `obstacle_avoidance_node` (sub `/cmd_vel_raw`, pub `/cmd_vel`) |
 | `slam.launch.py` | `sim_bringup` + `slam_toolbox` online_async |
 | `nav2_bringup.launch.py` | `sim_bringup` + Nav2 stack (map_server + amcl + planners + bt_navigator) |
@@ -100,3 +102,4 @@ Tests are pytest files run via `scripts/run_tests.sh`. Each stage restarts the c
 - Map save path must be outside `src/` inside the container (save to `~/`, then `cp` to `src/`).
 - `docker restart turtlebot3_simulator` before nav2 tests — lingering `gz sim` processes corrupt TF.
 - Nav2 map bounds: `phase6_map` is 12×12 cells @ 0.05 m; goal `(0.15, 0.10)` works; `(0.5, 0.0)` is out of bounds.
+- `turtlebot3_teleop` v2.3.6 hardcodes `TwistStamped`; bridge expects `Twist` — silent drop. Use `teleop_twist_keyboard` instead (already set in `teleop.launch.py`). Manual: `ros2 run teleop_twist_keyboard teleop_twist_keyboard`.
