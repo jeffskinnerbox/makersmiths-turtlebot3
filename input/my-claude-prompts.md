@@ -112,4 +112,11 @@ Use the AskUserQuestions tool for all things that require further clarification.
 
 ---
 
+## Execute Phase 8 Testing While Observing Gazebo GUI
+### 4th Claude Code Prompt
+I would like to repeat the Phase 8 test suite but this time display the Gazebo GUI on this host machine.
+I wish to visually observe the Turtlebot3 maneuvering in on the Gazebo GUI.
+
+
+---
 
