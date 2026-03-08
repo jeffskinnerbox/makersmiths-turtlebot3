@@ -2,7 +2,8 @@
 
 ## Creation of ROS2 DevContainer Skill
 ### 1st Claude Code Prompt
-Create for me a SKILL.md file with skill name of "ros_devcontainer".
+Create for me a SKILL.md file with skill name of "ros_devcontainer"
+and place the created skill document in @/.claude/skills/ros_devcontainer/.
 This skill assumes you ares an expert in doing the following:
 Create and configure a ROS 2 development Docker container (DevContainer)
 and supporting these three types of containers configurations:
@@ -10,7 +11,7 @@ and supporting these three types of containers configurations:
 * Full Desktop - for developing & testing
 * Custom Project - user choose a robot (TurtleBot3 currently only choose)
 
-Use the document @docs/RCLPY-From-Zero-To-Hero-1-kwlngi.pdf pages 14 to 23 as you primary guide for this skill.
+Use the document @/docs/RCLPY-From-Zero-To-Hero-1-kwlngi.pdf pages 14 to 23 as you primary guide for this skill.
 Use these additional sources to expand your ROS2 / Docker skill further:
 * [The Complete Guide to Docker for ROS 2 Jazzy Projects — Automatic Addison](https://automaticaddison.com/the-complete-guide-to-docker-for-ros-2-jazzy-projects/)
 * [The Complete Beginner's Guide to Using Docker for ROS 2 Deployment (2025) — RobotAir](https://blog.robotair.io/the-complete-beginners-guide-to-using-docker-for-ros-2-deployment-2025-edition-0f259ca8b378)
@@ -19,6 +20,12 @@ Within the body of the SKILL.md file, reference the above sources.
 
 The skill should also create bash scripts and ROS2 launch scripts
 that assist the user in the configuration and operation of the devcontainer.
+
+Put all `Dockerfile` and `docker-compose.yml` files in @/docker/.
+Put all executable scripts (e.g. *.sh,*.py files), except test scripts and `entrypoint.sh`, in @/scripts/
+Put all test scripts in @/scripts/test/
+
+Use the AskUserQuestions tool for all things that require further clarification about this SKILL.md file.
 
 When using this skill, and before generating any files, ask the user the following questions
 and use this information to guide the creation of the ROS 2 devcontainer:
@@ -69,9 +76,35 @@ and use this information to guide the creation of the ROS 2 devcontainer:
 
 ---
 
-## Creation of the Specification Document
+## Creation of ROS2 Architect Skill - NOT USED
 ### 2nd Claude Code Prompt
-Read @docs/my-vision.md and create a specification document @specification.md.
+Create for me a `SKILL.md` file, with skill name of "ros_architect",
+for a highly skilled architect of ROS 2 Jazzy autonomous robot solutions.
+This skill should follow ROS 2 architecture standards and best practices.
+Place the created skill document in @/.claude/skills/ros_architect/.
+
+
+## Creation of ROS2 Developer Skill - NOT USED
+### 2nd Claude Code Prompt
+Create for me a `SKILL.md` file, with skill name of "ros_developer",
+for a highly skilled developer/coder of ROS 2 Jazzy autonomous robot solutions.
+This skill should follow ROS 2 coding standards and best practices.
+All code should be well documented.
+Place the created skill document in @/.claude/skills/ros_developer/.
+
+## Creation of ROS2 Autonomous Robotics Test Engineer - NOT USED
+### 2nd Claude Code Prompt
+Create for me a `SKILL.md` file, with skill name of "ros_tester",
+for a highly skilled tester of ROS 2 Jazzy autonomous robot solutions.
+This skill should follow ROS 2 testing standards and best practices.
+All test scripts should be well documented.
+Place the created skill document in @/.claude/skills/ros_tester/.
+
+---
+
+## Creation of the Specification Document
+### 3rd Claude Code Prompt
+Read @/input/my-vision.md and create a specification document called @/docs/specification.md.
 
 Within the specification document you create, include this prompt,
 all question you ask me, along with my responses.
@@ -86,37 +119,29 @@ Use the AskUserQuestions tool for all things that require further clarification.
 ---
 
 ## Creation of the Development Plan Document
-### 3rd Claude Code Prompt
-Read @input/my-vision.md and @specification.md and create a development plan, to be called "development-plan.md",
+### 4th Claude Code Prompt
+Read @/input/my-vision.md and @/docs/specification.md and create a development plan, to be called @/docs/development-plan.md,
 describing how & when thing are to be created / build.
 The development plan must reflecting an incrementally build approach with testing after each increment.
 
 Make sure to cover the all major software components and their build order,
 key technical decisions to resolve upfront (e.g., which Python library to use),
-a rough phasing that mirrors the sequence reflected in @input/my-vision.md and @specification.md,
+a rough phasing that mirrors the sequence reflected in @/input/my-vision.md and @/docs/specification.md,
 and any external dependencies or risks (like software version mismatch).
 
 Produce the plan as a living document so it can update as the project evolves,
 not just a one-time artifact.
 I want it to serves as an ongoing reference rather than going stale after the first few sessions.
 Given the scope of this project — raspberry pi software, a simulator on desktop computer, and incremental testing —
-I want plan to save significant back-and-forth with Claude Code over the course of development.
+I want the plan to save significant back-and-forth with Claude Code over the course of development.
 
-Within the development plan document you create (to be called "development-plan.md"), include this prompt,
+Within the development plan document you create (to be called @/docs/development-plan.md), include this prompt,
 all question you ask me, along with my responses.
 Place this in an appendix and reference it at the beginning of the development plan
 and anywhere else in the text when its a useful reference.
 
 Think Hard about what must be done to create a robust plan.
 Use the AskUserQuestions tool for all things that require further clarification.
-
----
-
-## Execute Phase 8 Testing While Observing Gazebo GUI
-### 4th Claude Code Prompt
-I would like to repeat the Phase 8 test suite but this time display the Gazebo GUI on this host machine.
-I wish to visually observe the Turtlebot3 maneuvering in on the Gazebo GUI.
-
 
 ---
 
