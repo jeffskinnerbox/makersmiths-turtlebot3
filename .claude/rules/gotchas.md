@@ -1,5 +1,8 @@
 # Known Gotchas
 
+- **G26 — YAML merge (`<<: *anchor`) does NOT concat lists**: adding a `volumes:` key to a service that uses `<<: *ros-common` completely replaces the anchor's volumes list. Always put shared mounts in the anchor itself, never in per-service `volumes:` overrides.
+- **G25 — `ros-jazzy-joy` uses SDL2, not the kernel joystick API**: requires `/dev/input/eventX` (evdev), not just `/dev/input/jsX`. Fix: bind-mount `/dev/input:/dev/input` in compose + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]` (input GID on this host). Axis indices from SDL2 match jstest (same kernel order), but triggers start at 1.0 (not -32767) at rest.
+- **G24 — `docker compose restart` does NOT re-read compose file**: new `devices`, volumes, or env vars added to compose.yaml are NOT applied on restart. Must use `docker compose up -d --force-recreate <service>` to pick up compose changes.
 - **G22 — `libgl1-mesa-glx` removed in Ubuntu 24.04**: package no longer exists; replaced by `libgl1-mesa-dri`. Remove from Dockerfile apt installs.
 - **G23 — `/opt/ros/jazzy/bin` not in ENV PATH**: osrf and robotis base images add ROS bin to PATH only via `source setup.bash`, not via `ENV`. Dockerfiles must explicitly add `/opt/ros/${ROS_DISTRO}/bin` to `ENV PATH` for `which ros2` and `docker exec` to work without sourcing.
 - **Docker permission denied**: `jeff` in `docker` group but session predates `usermod`. Prefix with `sg docker -c "..."` until fresh login.

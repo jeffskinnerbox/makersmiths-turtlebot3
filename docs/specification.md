@@ -51,7 +51,7 @@ in a visitor-friendly demonstration system operable by non-technical Makersmiths
 | Host OS (development) | Ubuntu 24.04 LTS |
 | ROS distribution | Jazzy Jalisco |
 | Simulator | Gazebo Harmonic (`gz sim`) |
-| Gazebo world | [AWS RoboMaker Small Warehouse World][aws-warehouse] |
+| Gazebo world | `turtlebot3_world` (obstacle course) + `turtlebot3_house` (indoor) — AWS warehouse unavailable in apt (R7 materialised) |
 | DDS middleware | Fast-DDS (`rmw_fastrtps_cpp`) |
 | Container runtime | Docker + docker-compose |
 | Robot hardware | TurtleBot3 Burger, Raspberry Pi 4 (4GB RAM) |
@@ -147,8 +147,6 @@ map                              ← slam_toolbox (dynamic)
 
 ```
 turtlebot3/
-├── .devcontainer/
-│   └── devcontainer.json
 ├── .colcon/
 │   └── defaults.yaml               # colcon build defaults
 ├── docker/
@@ -163,15 +161,17 @@ turtlebot3/
 │   ├── workspace.sh                # Workspace setup helper
 │   ├── run_tests.sh                # Test runner (--gui flag)
 │   └── tmux_dashboard.sh           # TMUX monitoring (M4)
-├── config/
-│   ├── bridge_params.yaml          # ros_gz_bridge topic config
-│   ├── nav2_params.yaml            # Nav2 tuned for TB3 Burger
-│   ├── slam_params.yaml            # slam_toolbox online_async
-│   └── teleop_twist_joy.yaml       # Joystick axis/button mapping
-├── worlds/
-│   └── tb3_warehouse.world         # SDF with embedded TB3 model
 ├── src/
-│   ├── tb3_bringup/                # Launch files, configs (ament_python)
+│   ├── tb3_bringup/                # Launch files, configs, worlds (ament_python)
+│   │   ├── config/
+│   │   │   ├── bridge_params.yaml          # ros_gz_bridge topic config
+│   │   │   ├── teleop_twist_joy.yaml       # Joystick axis/button mapping
+│   │   │   ├── nav2_params.yaml            # Nav2 tuned for TB3 Burger (M3)
+│   │   │   └── slam_params.yaml            # slam_toolbox online_async (M3)
+│   │   ├── worlds/
+│   │   │   ├── tb3_warehouse.world         # turtlebot3_world + TB3 embedded
+│   │   │   └── tb3_house.world             # turtlebot3_house + TB3 embedded
+│   │   └── launch/
 │   ├── tb3_controller/             # Wanderer, patrol, gamepad (ament_python)
 │   └── tb3_monitor/                # LiDAR monitor, health (ament_python)
 ├── docs/
@@ -214,6 +214,11 @@ milestone sections. Full text is in [Appendix B](#appendix-b-known-gotchas-refer
 | G19 | SLAM | `/map` is 0x0 until robot drives and LiDAR scans accumulate |
 | G20 | Teleop | `teleop_twist_keyboard` keys: `i`=fwd, `,`=back, `j`/`l`=turn, `k`=stop |
 | G21 | Display | Gazebo GUI needs `xhost +local:docker` on host |
+| G22 | Docker | `libgl1-mesa-glx` removed in Ubuntu 24.04; use `libgl1-mesa-dri` |
+| G23 | Docker | `/opt/ros/jazzy/bin` not in `ENV PATH` in base images; add explicitly in Dockerfile |
+| G24 | Docker | `docker compose restart` does NOT re-read compose file; use `up --force-recreate` |
+| G25 | Gamepad | `ros-jazzy-joy` uses SDL2 — needs `/dev/input/eventX` + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]` |
+| G26 | Docker | YAML `<<:` anchor merge does NOT concat lists; per-service `volumes:` override replaces anchor volumes entirely |
 
 ---
 
@@ -279,11 +284,11 @@ and reboot buttons. All control runs in the simulator container.
 | ID | Requirement |
 |---|---|
 | FR-2.1 | `joy_node` reads F310 gamepad via `/dev/input/js0` (device passed through to container via `docker-compose.yml`) |
-| FR-2.2 | `teleop_twist_joy` publishes `geometry_msgs/msg/Twist` on `/cmd_vel` |
+| FR-2.2 | `teleop_twist_joy` publishes `geometry_msgs/msg/Twist` on `/cmd_vel_raw`; `gamepad_manager` gates output to `/cmd_vel` (e-stop relay pattern) |
 | FR-2.3 | Left joystick (axis 0) controls direction (angular Z); right joystick (axis 4) controls speed (linear X forward/reverse) |
 | FR-2.4 | **E-stop** (red/B button, index 1): publishes zero velocity on `/cmd_vel`, sets `/estop` topic to `true`, disables all velocity output from gamepad until restart |
 | FR-2.5 | **Restart** (green/A button, index 0): clears e-stop, sets `/estop` to `false`, re-enables velocity output |
-| FR-2.6 | **Reboot** (yellow/Y button, index 3): configurable behavior via `reboot_mode` parameter — `lifecycle` (default): transitions managed ROS nodes through shutdown→configure→activate cycle; `container`: triggers `docker restart` of the simulator container |
+| FR-2.6 | **Shutdown** (yellow/Y button, index 3): publishes zero velocity, sets `/estop=true`, sends SIGINT to process group — stops all gamepad nodes cleanly. Full auto-reboot deferred to Milestone 5 (systemd watchdog / docker restart policy on RPi). |
 | FR-2.7 | `gamepad_manager` node: subscribes to `/joy`, manages e-stop state machine, publishes `/estop` (RELIABLE + TRANSIENT_LOCAL QoS), implements reboot logic |
 | FR-2.8 | All velocity-publishing nodes (wanderer, patrol, teleop) must check `/estop` before publishing to `/cmd_vel` |
 | FR-2.9 | Simulator Dockerfile installs `ros-jazzy-joy` and `ros-jazzy-teleop-twist-joy` |
@@ -296,7 +301,7 @@ will be needed.
 
 #### Applicable Gotchas
 
-G3, G10, G12
+G3, G10, G12, G24, G25, G26
 
 #### Deliverables
 
@@ -315,8 +320,7 @@ G3, G10, G12
 | Direction control | Robot turns in Gazebo when left joystick is moved left/right |
 | E-stop engage | Press red/B button; robot stops immediately; joystick input produces no motion |
 | E-stop release | Press green/A button after e-stop; joystick control resumes |
-| Reboot (lifecycle) | Press yellow/Y button; ROS nodes restart via lifecycle transitions |
-| Reboot (container) | With `reboot_mode:=container`, yellow/Y triggers container restart |
+| Shutdown | Press yellow/Y button; all gamepad nodes stop cleanly, zero velocity published |
 
 ---
 
@@ -507,12 +511,11 @@ G1, G2, G3, G5, G6, G14
 | `patrol_node` | `goal_tolerance` | float | 0.25 | Distance (m) to consider waypoint reached |
 | `gamepad_manager` | `estop_button` | int | 1 | F310 button index — red/B |
 | `gamepad_manager` | `restart_button` | int | 0 | F310 button index — green/A |
-| `gamepad_manager` | `reboot_button` | int | 3 | F310 button index — yellow/Y |
-| `gamepad_manager` | `reboot_mode` | string | `lifecycle` | `lifecycle` or `container` |
+| `gamepad_manager` | `shutdown_button` | int | 3 | F310 button index — yellow/Y (SIGINT to process group) |
 | `teleop_twist_joy` | `axis_linear.x` | int | 4 | Right stick Y axis (speed) |
 | `teleop_twist_joy` | `axis_angular.yaw` | int | 0 | Left stick X axis (direction) |
-| `teleop_twist_joy` | `scale_linear.x` | float | 0.22 | Max linear velocity (m/s) |
-| `teleop_twist_joy` | `scale_angular.yaw` | float | 1.0 | Max angular velocity (rad/s) |
+| `teleop_twist_joy` | `scale_linear.x` | float | -0.22 | Negated: SDL2 up=-1.0, so negative gives positive forward |
+| `teleop_twist_joy` | `scale_angular.yaw` | float | -1.0 | Negated: SDL2 left=-1.0, gives correct CCW turn |
 | `lidar_monitor_node` | `publish_rate` | float | 5.0 | Rate (Hz) for `/closest_obstacle` |
 | `slam_toolbox` | `mode` | string | `online_async` | SLAM mode |
 | `sim_bringup` | `headless` | bool | `false` | Skip Gazebo GUI client |
@@ -523,12 +526,10 @@ G1, G2, G3, G5, G6, G14
 
 ### 8.1 Gazebo World
 
-* **Source**: `ros-jazzy-aws-robomaker-small-warehouse-world` package
-* **File**: `worlds/tb3_warehouse.world` (SDF format)
-* **Modification**: TB3 Burger model embedded directly in the SDF (G9: gz-sim 8.10
-  removed the spawner service `/world/default/create`)
-* **Spawn pose**: near warehouse entrance, facing inward (exact coordinates TBD
-  when world geometry is confirmed)
+* **Source**: `ros-jazzy-turtlebot3-gazebo` — `turtlebot3_world` (obstacle course) and `turtlebot3_house` (indoor rooms); AWS warehouse not available in apt (R7 materialised)
+* **Files**: `src/tb3_bringup/worlds/tb3_warehouse.world` and `tb3_house.world` (SDF format)
+* **Modification**: TB3 Burger model embedded directly in the SDF via `<include><uri>model://turtlebot3_burger</uri></include>` (G9: gz-sim 8.10 removed the spawner service `/world/default/create`)
+* **Model path**: `/opt/ros/jazzy/share/turtlebot3_gazebo/models/turtlebot3_burger/` (accessed via `model://turtlebot3_burger` with `GZ_SIM_RESOURCE_PATH`)
 
 ### 8.2 ros_gz_bridge Configuration (`config/bridge_params.yaml`)
 
@@ -680,6 +681,11 @@ Full text reproduced from `.claude/rules/gotchas.md` for self-contained readabil
 * **G19 — `/map` is 0x0 until robot moves**: slam_toolbox publishes an empty initial map. Map fills as the robot drives and LiDAR scans accumulate.
 * **G20 — `teleop_twist_keyboard` key bindings**: `i`=forward, `,`=back, `j`/`l`=turn, `k`=stop. Hold key to keep moving.
 * **G21 — Gazebo GUI on host**: `docker-compose.yml` passes `DISPLAY` + mounts X11 socket. Run `xhost +local:docker` once per login.
+* **G22 — `libgl1-mesa-glx` removed in Ubuntu 24.04**: package no longer exists; replaced by `libgl1-mesa-dri`. Remove from Dockerfile apt installs.
+* **G23 — `/opt/ros/jazzy/bin` not in ENV PATH**: osrf and robotis base images add ROS bin to PATH only via `source setup.bash`, not via `ENV`. Dockerfiles must explicitly add `/opt/ros/${ROS_DISTRO}/bin` to `ENV PATH`.
+* **G24 — `docker compose restart` does NOT re-read compose file**: new `devices`, volumes, or env vars added to compose.yaml are NOT applied on restart. Must use `docker compose up -d --force-recreate <service>`.
+* **G25 — `ros-jazzy-joy` uses SDL2, not the kernel joystick API**: requires `/dev/input/eventX` (evdev). Fix: bind-mount `/dev/input:/dev/input` + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]` (input GID). `joy_node` must have `use_sim_time: False`.
+* **G26 — YAML merge (`<<: *anchor`) does NOT concat lists**: adding a `volumes:` key to a service that uses `<<: *ros-common` completely replaces the anchor's volumes list. Always put shared mounts in the anchor itself.
 
 ---
 

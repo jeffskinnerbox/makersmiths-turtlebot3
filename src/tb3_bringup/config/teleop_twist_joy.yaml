@@ -1,0 +1,28 @@
+# teleop_twist_joy.yaml — Logitech F310 gamepad config for TurtleBot3 Burger
+# Axes confirmed via jstest /dev/input/js0 (D5, 2026-03-08)
+#
+# Driving:
+#   Hold RB (btn 5) + right stick (up/down) = linear speed
+#   Hold RB (btn 5) + left stick (left/right) = angular direction
+#   Hold LB (btn 4) instead for turbo speed
+#
+# Signs: Linux joystick Y-axis is inverted (up = -1.0).
+#   scale_linear.x: -0.22 → stick up (+forward intent) → positive cmd_vel.linear.x
+#   scale_angular.yaw: -1.0 → stick left (+left intent) → positive yaw (CCW = left turn)
+
+teleop_twist_joy_node:
+  ros__parameters:
+    axis_linear:
+      x: 4              # Right stick Y (up = forward)
+    scale_linear:
+      x: -0.22          # TB3 Burger max safe speed (m/s); negative for up=forward
+    scale_linear_turbo:
+      x: -0.4           # Turbo speed (m/s)
+
+    axis_angular:
+      yaw: 0            # Left stick X (left = left turn)
+    scale_angular:
+      yaw: -1.0         # rad/s; negative for left=CCW
+
+    enable_button: 5    # RB — hold to enable motion
+    enable_turbo_button: 4  # LB — hold for turbo speed

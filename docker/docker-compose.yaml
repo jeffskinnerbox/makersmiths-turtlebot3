@@ -20,6 +20,7 @@ x-ros-common: &ros-common
     - ../config:/home/ros_user/ros2_ws/config
     - ../.colcon:/home/ros_user/.colcon
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - /dev/input:/dev/input   # G25: SDL2 (ros-jazzy-joy) needs /dev/input/eventX
     # Uncomment if .Xauthority exists on host (needed for some X11 setups):
     # - ${HOME}/.Xauthority:/home/ros_user/.Xauthority:ro
   network_mode: host
@@ -27,6 +28,11 @@ x-ros-common: &ros-common
   stdin_open: true
   tty: true
   restart: unless-stopped
+  # G25: SDL2 needs input group (GID 102) + cgroup rule for major 13 devices
+  group_add:
+    - "102"   # input group (GID 102 on this host)
+  device_cgroup_rules:
+    - "c 13:* rmw"   # allow all /dev/input/* (major 13) in container cgroup
 
 services:
   turtlebot3_simulator:

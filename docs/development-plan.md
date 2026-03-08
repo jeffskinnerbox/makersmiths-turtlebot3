@@ -12,7 +12,7 @@
 **Key References**:
 * Requirements: `input/my-vision.md`
 * Specification: `docs/specification.md` — FR-IDs, G-IDs, test-gate categories
-* Gotchas: `.claude/rules/gotchas.md` — 21 pitfalls (G1–G19 original + G22–G23 added during M1)
+* Gotchas: `.claude/rules/gotchas.md` — 26 pitfalls (G1–G21 original + G22–G23 added during M1 + G24–G26 added during M2)
 * Skills: `.claude/skills/` — 7 ROS 2 domain skills
 
 ---
@@ -192,8 +192,8 @@ These must be investigated before or during the indicated phase. Record results 
 
 | Field | Value |
 |---|---|
-| **Status** | `NOT STARTED` |
-| **Completed** | — |
+| **Status** | `COMPLETE` |
+| **Completed** | 2026-03-08 |
 | **Complexity** | Small (research only) |
 | **Depends on** | Phase 1.4 |
 | **Decisions** | D4, D5 |
@@ -216,8 +216,8 @@ These must be investigated before or during the indicated phase. Record results 
 
 | Field | Value |
 |---|---|
-| **Status** | `NOT STARTED` |
-| **Completed** | — |
+| **Status** | `COMPLETE` |
+| **Completed** | 2026-03-08 |
 | **Complexity** | Medium |
 | **Depends on** | Phase 2.1 |
 | **Spec refs** | FR-2.1, FR-2.2, FR-2.3, FR-2.7, FR-2.9, FR-2.10 |
@@ -243,8 +243,8 @@ These must be investigated before or during the indicated phase. Record results 
 
 | Field | Value |
 |---|---|
-| **Status** | `NOT STARTED` |
-| **Completed** | — |
+| **Status** | `COMPLETE` |
+| **Completed** | 2026-03-08 |
 | **Complexity** | Medium |
 | **Depends on** | Phase 2.2 |
 | **Spec refs** | FR-2.4, FR-2.5, FR-2.6, FR-2.8 |
@@ -489,7 +489,7 @@ All tests support `--gui` flag (headless by default, G13).
 | Phase | Changes |
 |---|---|
 | 1.1 | Base: two containers, `network_mode: host`, `ipc: host`, Fast-DDS, `GZ_IP`, X11 mounts, volume mounts (`src/`, `scripts/`, `config/`, `.colcon/`) |
-| 2.2 | Add `devices: ["/dev/input/js0"]` to simulator service |
+| 2.2 | Add `/dev/input:/dev/input` bind-mount + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]` to x-ros-common anchor (G25, G26) |
 | 5.1 | Separate compose files or profiles for sim-only vs hardware deployment |
 
 ### 4.3 Launch File Composition
@@ -548,6 +548,16 @@ Record all technical decisions made during execution.
 | 2026-03-08 | 1.3 | D2: TB3 burger SDF at `/opt/ros/jazzy/share/turtlebot3_gazebo/models/turtlebot3_burger/` | Found via `find`; used as `model://turtlebot3_burger` with `GZ_SIM_RESOURCE_PATH` |
 | 2026-03-08 | 1.3 | D3: TB3 embedded in world SDF via `<include><uri>model://turtlebot3_burger</uri></include>` | G9: spawner removed in gz-sim 8.10; world + bridge config kept inside tb3_bringup package |
 | 2026-03-08 | 1.3 | `ros2 topic list` hangs in docker exec — use `ros2 topic echo --once` per topic for T1.3c | G4 DDS discovery blocks even with Fast-DDS in exec context; echo/info on specific topics works |
+| 2026-03-08 | 2.1 | D4: `teleop_twist_joy` v2.6.5 publishes plain `Twist` by default | `publish_stamped_twist` param exists but defaults to `false`; no adapter node needed; confirmed via binary strings |
+| 2026-03-08 | 2.1 | D5: F310 in D-mode, axis layout confirmed via jstest: axis[0]=Left-X (yaw), axis[1]=Left-Y, axis[2]=L-trigger, axis[3]=Right-X, axis[4]=Right-Y (linear), axis[5]=R-trigger, axis[6]=Dpad-X, axis[7]=Dpad-Y | Physically confirmed with jstest /dev/input/js0 |
+| 2026-03-08 | 2.1 | D5: Button layout (D-mode): btn[0]=A(green/restart), btn[1]=B(red/estop), btn[2]=X(blue), btn[3]=Y(yellow/reboot), btn[4]=LB, btn[5]=RB, btn[6]=Back, btn[7]=Start, btn[8]=Guide, btn[9]=L-stick, btn[10]=R-stick | Standard F310 D-mode Linux joystick mapping |
+| 2026-03-08 | 2.1 | Device passthrough: `/dev/input/js0` added to simulator service in docker-compose.yaml | `docker compose restart` does NOT re-read compose — must use `up --force-recreate`; ros_user has read access (others=r) |
+| 2026-03-08 | 2.2 | G25: `ros-jazzy-joy` uses SDL2 — needs `/dev/input/eventX` + device_cgroup_rules + input group | js0 alone insufficient; fixed via /dev/input bind-mount in x-ros-common, cgroup rule `c 13:* rmw`, group_add 102 |
+| 2026-03-08 | 2.2 | G26: YAML `<<:` merge does not concat lists — simulator `volumes:` override replaced x-ros-common volumes | Moved /dev/input mount into x-ros-common anchor; never add volumes in per-service override |
+| 2026-03-08 | 2.2 | joy_node `use_sim_time: true` blocks publish until /clock received | Always set `use_sim_time: False` on joy_node (reads physical hardware, must use wall clock) |
+| 2026-03-08 | 2.3 | E-stop via /cmd_vel_raw relay: teleop → /cmd_vel_raw → gamepad_manager → /cmd_vel | Cleaner than dual-publisher fight; gamepad_manager gates all motion |
+| 2026-03-08 | 2.3 | Y button: sends SIGINT to process group, exits all gamepad nodes | Full auto-reboot deferred to Phase 5 hardware (systemd watchdog or docker restart policy) |
+| 2026-03-08 | 2.3 | Button edge detection: prev=[0]*len on first message, not prev=buttons | First button press was never detected; fix applied in node and test stub |
 
 ---
 
@@ -558,6 +568,9 @@ Record all modifications to this plan.
 | Date | Change | Reason |
 |---|---|---|
 | 2026-03-07 | v1.0 — initial plan created | Generated from specification via Claude Code |
+| 2026-03-08 | Milestone 2 complete (phases 2.1–2.3); all test-gates pass | Gamepad control, e-stop, restart, Y-shutdown all verified manually |
+| 2026-03-08 | Phase 2.2 complete; T2.2a/b/c pass; G25+G26 added to gotchas.md | joy node works; robot moves with RB+right stick; turns with RB+left stick |
+| 2026-03-08 | Phase 2.1 complete; D4+D5 resolved; G24 added to gotchas.md | teleop_twist_joy publishes Twist by default; F310 axis layout decoded; device passthrough confirmed |
 | 2026-03-08 | Milestone 1 complete (phases 1.1–1.4) | All automated test gates pass (11/11 via `run_tests.sh m1`) |
 | 2026-03-08 | Added `tb3_house.world` + `sim_house.launch.py` | User request; turtlebot3_house is a good SLAM/Nav2 demo environment |
 | 2026-03-08 | Config/worlds moved into `src/tb3_bringup/` package | Standard ROS ament_python pattern; avoids extra docker volume mount |
@@ -635,9 +648,11 @@ All files to be created, grouped by the phase that creates them.
 * [ ] `src/tb3_bringup/tb3_bringup/__init__.py`
 
 ### Phase 1.3
-* [ ] `worlds/tb3_warehouse.world`
-* [ ] `config/bridge_params.yaml`
+* [ ] `src/tb3_bringup/worlds/tb3_warehouse.world`
+* [ ] `src/tb3_bringup/worlds/tb3_house.world`
+* [ ] `src/tb3_bringup/config/bridge_params.yaml`
 * [ ] `src/tb3_bringup/launch/sim_bringup.launch.py`
+* [ ] `src/tb3_bringup/launch/sim_house.launch.py`
 * [ ] `src/tb3_bringup/launch/teleop.launch.py`
 
 ### Phase 1.4
@@ -652,12 +667,12 @@ All files to be created, grouped by the phase that creates them.
 * [ ] `src/tb3_controller/resource/tb3_controller`
 * [ ] `src/tb3_controller/tb3_controller/__init__.py`
 * [ ] `src/tb3_controller/tb3_controller/gamepad_manager_node.py`
-* [ ] `config/teleop_twist_joy.yaml`
+* [ ] `src/tb3_bringup/config/teleop_twist_joy.yaml`
 * [ ] `src/tb3_bringup/launch/gamepad.launch.py`
 
 ### Phase 2.3
 * [ ] `docs/user-guide-milestone-2.md`
-* [ ] `src/tb3_controller/test/test_estop_state.py`
+* [ ] `src/tb3_controller/test/test_gamepad_manager.py`
 
 ### Phase 3.1
 * [ ] `src/tb3_monitor/package.xml`
@@ -671,8 +686,8 @@ All files to be created, grouped by the phase that creates them.
 * [ ] `src/tb3_controller/test/test_wanderer_logic.py`
 
 ### Phase 3.2
-* [ ] `config/slam_params.yaml`
-* [ ] `config/nav2_params.yaml`
+* [ ] `src/tb3_bringup/config/slam_params.yaml`
+* [ ] `src/tb3_bringup/config/nav2_params.yaml`
 * [ ] `src/tb3_bringup/launch/slam.launch.py`
 * [ ] `src/tb3_bringup/launch/nav2.launch.py`
 

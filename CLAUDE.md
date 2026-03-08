@@ -16,18 +16,19 @@ Both containers use `network_mode: host`, Fast-DDS (`rmw_fastrtps_cpp`), and `GZ
 
 ## Current Project State
 
-**Milestone 1 complete** (2026-03-08). Simulation environment is fully operational.
+**Milestone 2 complete** (2026-03-08). Gamepad control fully operational.
 
 **What exists**:
 - `docker/` — Dockerfile.simulator, Dockerfile.turtlebot, docker-compose.yaml
 - `scripts/` — build.sh, run_docker.sh, attach_terminal.sh, workspace.sh, run_tests.sh
 - `entrypoint.sh`, `.colcon/defaults.yaml`
-- `src/tb3_bringup/` — ament_python package with worlds, config, launch files, tests
-- `docs/` — specification, development plan, user-guide-milestone-1
+- `src/tb3_bringup/` — ament_python: worlds, config, launch files (incl. gamepad.launch.py), tests
+- `src/tb3_controller/` — ament_python: `gamepad_manager_node.py`, unit tests
+- `docs/` — specification, development plan, user-guide-milestone-1, user-guide-milestone-2
 - `.claude/skills/` — ROS 2 domain skills
-- `.claude/rules/` — `gotchas.md` (21 known pitfalls) and `git-commit.md`
+- `.claude/rules/` — `gotchas.md` (26 known pitfalls, G1–G26) and `git-commit.md`
 
-**Next step**: Milestone 2 — Phase 2.1 gamepad investigation (connect F310, resolve D4/D5).
+**Next step**: Milestone 3 — Phase 3.1 LiDAR Monitor + Wanderer.
 
 ## Development Methodology
 
@@ -52,6 +53,16 @@ Document-driven, phased approach with test-gates (see `input/README.md` for diag
 - **SLAM**: `slam_toolbox` online_async; save maps via service call, not `map_saver_cli`
 - **Gazebo**: `gz sim` (not `gazebo`); no spawner in gz-sim 8.10 — embed model in world SDF
 - **Headless testing**: `headless:=true` on `sim_bringup.launch.py`
+- **Gamepad**: `ros-jazzy-joy` uses SDL2 — needs `/dev/input` bind-mount + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]`; `joy_node` must have `use_sim_time: False`
+- **E-stop**: teleop → `/cmd_vel_raw` → `gamepad_manager` → `/cmd_vel`; B=stop, A=clear, Y=shutdown
+
+## Session Start Convention
+
+At the start of each work session, Claude Code should:
+1. Read `docs/development-plan.md` to determine current phase and status
+2. Read the Decisions Log within that doc for prior decisions
+3. Execute the current phase's deliverables and test-gates
+4. Update status markers and logs before ending the session
 
 ## Docker Commands (when containers exist)
 
@@ -77,9 +88,14 @@ ros2 launch tb3_bringup sim_bringup.launch.py             # turtlebot3_world (ob
 ros2 launch tb3_bringup sim_house.launch.py               # turtlebot3_house (indoor rooms)
 ros2 launch tb3_bringup sim_bringup.launch.py headless:=true  # headless (no GUI)
 
-# Run tests
+# Run all tests
 bash scripts/run_tests.sh all            # headless
 bash scripts/run_tests.sh all --gui      # with Gazebo GUI (needs xhost +local:docker)
+
+# Run a single pytest test (inside container)
+docker exec turtlebot3_simulator bash -c \
+  "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash && \
+   python3 -m pytest src/tb3_bringup/test/ -q -k 'test_name'"
 ```
 
 ## Actual Repository Layout
@@ -96,11 +112,12 @@ turtlebot3/
 ├── src/
 │   ├── tb3_bringup/                # Launch files, worlds, config (ament_python)
 │   │   ├── config/bridge_params.yaml
+│   │   ├── config/teleop_twist_joy.yaml # Joystick axis/button mapping
 │   │   ├── worlds/tb3_warehouse.world   # turtlebot3_world env + TB3 embedded
 │   │   ├── worlds/tb3_house.world       # turtlebot3_house env + TB3 embedded
-│   │   └── launch/sim_bringup.launch.py, sim_house.launch.py, teleop.launch.py
-│   ├── tb3_controller/             # Wanderer, patrol, gamepad (ament_python) — M2/M3
-│   └── tb3_monitor/                # LiDAR monitor, health (ament_python) — M3
+│   │   └── launch/sim_bringup.launch.py, sim_house.launch.py, teleop.launch.py, gamepad.launch.py
+│   └── tb3_controller/             # Gamepad manager (ament_python) — M2 complete
+│                                   # wanderer_node, patrol_node added in M3
 ├── docs/                           # spec, dev plan, user guides
 └── input/                          # vision, prompts, methodology
 ```
@@ -116,6 +133,7 @@ turtlebot3/
 ## Key Reference Documents
 
 - **Requirements**: `input/my-vision.md`
-- **Specification**: `docs/specification.md` — full system architecture, ROS interfaces table, tf2 frame tree, gotcha cross-references (G1-G21), package specs, and all 5 milestone definitions
-- **Gotchas**: `.claude/rules/gotchas.md` — 21 proven pitfalls with workarounds
+- **Specification**: `docs/specification.md` — full system architecture, ROS interfaces table, tf2 frame tree, gotcha cross-references (G1-G26), package specs, and all 5 milestone definitions
+- **Development Plan**: `docs/development-plan.md` — living document; phase status, decisions log, change log
+- **Gotchas**: `.claude/rules/gotchas.md` — 26 proven pitfalls with workarounds
 - **Methodology**: `input/README.md` — document-driven workflow diagram

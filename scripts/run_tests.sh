@@ -172,7 +172,70 @@ run_m1() {
 # ── Milestone 2 ───────────────────────────────────────────────────────────────
 run_m2() {
     _head "Milestone 2: Gamepad Control"
-    _skip "M2 tests not yet implemented (Phase 2.x)"
+
+    # ── Unit tests ────────────────────────────────────────────────────────────
+    echo "  Unit tests (pytest):"
+
+    run_test "T2.3u  pytest tb3_controller" \
+        docker exec turtlebot3_simulator bash -c \
+            "source /opt/ros/jazzy/setup.bash && cd ~/ros2_ws && \
+             python3 -m pytest src/tb3_controller/test/ -q --tb=short 2>&1"
+
+    # ── Gamepad stack (automated checks) ─────────────────────────────────────
+    echo "  Gamepad stack:"
+
+    local gp_results
+    gp_results=$(docker exec turtlebot3_simulator bash -c "
+        source /opt/ros/jazzy/setup.bash
+        source ~/ros2_ws/install/setup.bash 2>/dev/null || true
+        ros2 launch tb3_bringup gamepad.launch.py > /tmp/gp.log 2>&1 &
+        GPID=\$!
+        sleep 6
+
+        # T2.2a: /joy topic has publisher (SDL2 joy_node running)
+        ros2 topic info /joy 2>/dev/null | grep -q 'Publisher count: [1-9]' \
+            && echo 'T2.2a:PASS' || echo 'T2.2a:FAIL'
+
+        # T2.3a: /estop topic exists with TRANSIENT_LOCAL (initial state published)
+        timeout 4 ros2 topic echo /estop --once 2>/dev/null | grep -q 'data:' \
+            && echo 'T2.3a:PASS' || echo 'T2.3a:FAIL'
+
+        # T2.3e: /cmd_vel_raw exists (teleop remapped correctly)
+        ros2 topic info /cmd_vel_raw 2>/dev/null | grep -q 'Publisher count: [1-9]' \
+            && echo 'T2.3e_remap:PASS' || echo 'T2.3e_remap:FAIL'
+
+        kill \$GPID 2>/dev/null
+        sleep 2
+    " 2>/dev/null) || true
+
+    for marker in T2.2a T2.3a T2.3e_remap; do
+        case $marker in
+            T2.2a)        label="T2.2a  /joy published (F310 detected)" ;;
+            T2.3a)        label="T2.3a  /estop published (initial state latched)" ;;
+            T2.3e_remap)  label="T2.3e  /cmd_vel_raw exists (teleop remapped)" ;;
+        esac
+        if echo "$gp_results" | grep -q "${marker}:PASS"; then
+            _pass "$label"
+        else
+            _fail "$label"
+        fi
+    done
+
+    # ── Manual tests ──────────────────────────────────────────────────────────
+    if $GUI; then
+        echo "  Manual tests (gamepad required):"
+        _skip "T2.2b  Robot moves forward — hold RB + right stick up"
+        _skip "T2.2c  Robot turns — hold RB + left stick left/right"
+        _skip "T2.3a  Press B → robot stops, /estop=true, no motion"
+        _skip "T2.3b  Press A → e-stop clears, motion resumes"
+        _skip "T2.3c  Press Y → gamepad nodes shut down cleanly"
+        echo
+        echo "  To run manual M2 tests:"
+        echo "    1. bash scripts/run_docker.sh (if not running)"
+        echo "    2. bash scripts/attach_terminal.sh turtlebot3_simulator"
+        echo "    3. ros2 launch tb3_bringup sim_bringup.launch.py"
+        echo "    4. (new terminal) ros2 launch tb3_bringup gamepad.launch.py"
+    fi
 }
 
 # ── Milestone 3 ───────────────────────────────────────────────────────────────
