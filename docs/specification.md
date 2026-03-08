@@ -218,6 +218,8 @@ milestone sections. Full text is in [Appendix B](#appendix-b-known-gotchas-refer
 | G24 | Docker | `docker compose restart` does NOT re-read compose file; use `up --force-recreate` |
 | G25 | Gamepad | `ros-jazzy-joy` uses SDL2 — needs `/dev/input/eventX` + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]` |
 | G26 | Docker | YAML `<<:` anchor merge does NOT concat lists; per-service `volumes:` override replaces anchor volumes entirely |
+| G27 | SLAM | `async_slam_toolbox_node` is a lifecycle node; use `online_async_launch.py` with `autostart:=true`, not `Node()` directly |
+| G28 | ROS CLI | `ros2 service call` blocks indefinitely if server not up; always wrap with `timeout 20 ros2 service call ...` |
 
 ---
 
@@ -685,6 +687,8 @@ Full text reproduced from `.claude/rules/gotchas.md` for self-contained readabil
 * **G24 — `docker compose restart` does NOT re-read compose file**: new `devices`, volumes, or env vars added to compose.yaml are NOT applied on restart. Must use `docker compose up -d --force-recreate <service>`.
 * **G25 — `ros-jazzy-joy` uses SDL2, not the kernel joystick API**: requires `/dev/input/eventX` (evdev). Fix: bind-mount `/dev/input:/dev/input` + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]` (input GID). `joy_node` must have `use_sim_time: False`.
 * **G26 — YAML merge (`<<: *anchor`) does NOT concat lists**: adding a `volumes:` key to a service that uses `<<: *ros-common` completely replaces the anchor's volumes list. Always put shared mounts in the anchor itself.
+* **G27 — `async_slam_toolbox_node` is a lifecycle node**: spawning it directly with `Node()` leaves it in unconfigured state — no `/scan` subscription, no `/map` publication. Use slam_toolbox's provided `online_async_launch.py` (with `autostart:=true`) which emits CONFIGURE → ACTIVATE lifecycle events automatically.
+* **G28 — `ros2 service call` blocks indefinitely if service is unavailable**: unlike topic echo which has a `--timeout` option, `ros2 service call` waits forever if the server isn't up. Always wrap with `timeout 20 ros2 service call ...` in scripts.
 
 ---
 

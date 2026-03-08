@@ -77,7 +77,7 @@ I envision the following major milestone within this phased plan:
 [GL.iNet GL-AXT1800 Portable Travel Router][08] with SSID "JeffTravelRouter-2.4".
    Also create test-gates for this work.
    When complete, perform all previous test-gates again,
-   create a user guide document (called `user-guide-milestone-4.md`) written so all tests can be manually repeated.
+   create a user guide document (called `user-guide-milestone-5.md`) written so all tests can be manually repeated.
    The execution of these test must be observable by the human operator via Gazebo.
 
 

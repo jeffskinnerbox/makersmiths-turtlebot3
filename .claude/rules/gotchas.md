@@ -1,5 +1,7 @@
 # Known Gotchas
 
+- **G28 — `ros2 service call` blocks indefinitely if service is unavailable**: unlike topic echo which has a timeout flag, `ros2 service call` waits forever if the server isn't up. Always wrap with `timeout 20 ros2 service call ...` in scripts.
+- **G27 — `async_slam_toolbox_node` is a lifecycle node**: spawning it directly with `Node()` leaves it in unconfigured state — no `/scan` subscription, no `/map` publication. Use slam_toolbox's provided `online_async_launch.py` (with `autostart:=true`) which emits CONFIGURE → ACTIVATE lifecycle events automatically.
 - **G26 — YAML merge (`<<: *anchor`) does NOT concat lists**: adding a `volumes:` key to a service that uses `<<: *ros-common` completely replaces the anchor's volumes list. Always put shared mounts in the anchor itself, never in per-service `volumes:` overrides.
 - **G25 — `ros-jazzy-joy` uses SDL2, not the kernel joystick API**: requires `/dev/input/eventX` (evdev), not just `/dev/input/jsX`. Fix: bind-mount `/dev/input:/dev/input` in compose + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]` (input GID on this host). Axis indices from SDL2 match jstest (same kernel order), but triggers start at 1.0 (not -32767) at rest.
 - **G24 — `docker compose restart` does NOT re-read compose file**: new `devices`, volumes, or env vars added to compose.yaml are NOT applied on restart. Must use `docker compose up -d --force-recreate <service>` to pick up compose changes.

@@ -12,7 +12,7 @@
 **Key References**:
 * Requirements: `input/my-vision.md`
 * Specification: `docs/specification.md` — FR-IDs, G-IDs, test-gate categories
-* Gotchas: `.claude/rules/gotchas.md` — 26 pitfalls (G1–G21 original + G22–G23 added during M1 + G24–G26 added during M2)
+* Gotchas: `.claude/rules/gotchas.md` — 28 pitfalls (G1–G21 original + G22–G23 added during M1 + G24–G26 added during M2 + G27–G28 added during Phase 3.2)
 * Skills: `.claude/skills/` — 7 ROS 2 domain skills
 
 ---
@@ -558,6 +558,12 @@ Record all technical decisions made during execution.
 | 2026-03-08 | 2.3 | E-stop via /cmd_vel_raw relay: teleop → /cmd_vel_raw → gamepad_manager → /cmd_vel | Cleaner than dual-publisher fight; gamepad_manager gates all motion |
 | 2026-03-08 | 2.3 | Y button: sends SIGINT to process group, exits all gamepad nodes | Full auto-reboot deferred to Phase 5 hardware (systemd watchdog or docker restart policy) |
 | 2026-03-08 | 2.3 | Button edge detection: prev=[0]*len on first message, not prev=buttons | First button press was never detected; fix applied in node and test stub |
+| 2026-03-08 | 3.1 | Wanderer uses RELIABLE+TRANSIENT_LOCAL for /estop; defaults _estop=False | Gets latched estop state on subscribe; operates autonomously without gamepad |
+| 2026-03-08 | 3.1 | DDS discovery delay: integration tests wait 12s after wanderer launch before checking new topics | Fast-DDS needs >6s to discover brand-new topics with no prior publishers |
+| 2026-03-08 | 3.2 | D6: Nav2 inflation_radius=0.55 for turtlebot3_world | Standard TB3 default; robot_radius=0.105 (FR-3.4); max_vel_x=0.22 (FR-3.4) |
+| 2026-03-08 | 3.2 | `async_slam_toolbox_node` is a lifecycle node — must use slam_toolbox's online_async_launch.py | Direct `Node()` spawn leaves it unconfigured; no /scan sub, no /map pub; lifecycle autostart handles CONFIGURE→ACTIVATE |
+| 2026-03-08 | 3.2 | Nav2 launched via nav2_bringup/navigation_launch.py (no AMCL/map_server) | slam_toolbox provides map→odom TF and /map; bringup_launch.py adds AMCL which conflicts |
+| 2026-03-08 | 3.2 | ros2 service call needs `timeout 20` prefix in scripts | Without timeout, call blocks indefinitely if service is unavailable (e.g., SLAM not yet active) |
 
 ---
 

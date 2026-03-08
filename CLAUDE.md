@@ -16,19 +16,20 @@ Both containers use `network_mode: host`, Fast-DDS (`rmw_fastrtps_cpp`), and `GZ
 
 ## Current Project State
 
-**Milestone 2 complete** (2026-03-08). Gamepad control fully operational.
+**Phases 3.1 + 3.2 complete** (2026-03-08). SLAM + Nav2 operational in simulation.
 
 **What exists**:
 - `docker/` — Dockerfile.simulator, Dockerfile.turtlebot, docker-compose.yaml
 - `scripts/` — build.sh, run_docker.sh, attach_terminal.sh, workspace.sh, run_tests.sh
 - `entrypoint.sh`, `.colcon/defaults.yaml`
-- `src/tb3_bringup/` — ament_python: worlds, config, launch files (incl. gamepad.launch.py), tests
-- `src/tb3_controller/` — ament_python: `gamepad_manager_node.py`, unit tests
+- `src/tb3_bringup/` — ament_python: worlds, config (bridge, teleop, slam, nav2), launch files, tests
+- `src/tb3_controller/` — ament_python: `gamepad_manager_node.py`, `wanderer_node.py`, unit tests
+- `src/tb3_monitor/` — ament_python: `lidar_monitor_node.py`, unit tests
 - `docs/` — specification, development plan, user-guide-milestone-1, user-guide-milestone-2
 - `.claude/skills/` — ROS 2 domain skills
-- `.claude/rules/` — `gotchas.md` (26 known pitfalls, G1–G26) and `git-commit.md`
+- `.claude/rules/` — `gotchas.md` (28 known pitfalls, G1–G28) and `git-commit.md`
 
-**Next step**: Milestone 3 — Phase 3.1 LiDAR Monitor + Wanderer.
+**Next step**: Phase 3.3 — Patrol Node + `capability_demo.launch.py`.
 
 **Package build order**: `tb3_monitor` → `tb3_controller` → `tb3_bringup` (tb3_monitor has no in-project deps; tb3_bringup launch files reference both).
 
@@ -58,6 +59,8 @@ Document-driven, phased approach with test-gates (see `input/README.md` for diag
 - **Gamepad**: `ros-jazzy-joy` uses SDL2 — needs `/dev/input` bind-mount + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]`; `joy_node` must have `use_sim_time: False`
 - **E-stop**: teleop → `/cmd_vel_raw` → `gamepad_manager` → `/cmd_vel`; B=stop, A=clear, Y=shutdown
 - **F310 (D-mode) mapping**: axis[0]=Left-X(yaw), axis[4]=Right-Y(linear); btn[0]=A(clear), btn[1]=B(estop), btn[3]=Y(shutdown); RB (btn[5]) is deadman hold
+- **Nav2 with slam_toolbox**: use `navigation_launch.py` (not `bringup_launch.py`) — no AMCL/map_server needed; slam_toolbox provides map→odom TF and `/map`
+- **Wanderer e-stop**: subscribes `/estop` with `RELIABLE+TRANSIENT_LOCAL`; defaults `_estop=False` so robot wanders without gamepad running
 
 ## Session Start Convention
 
@@ -91,6 +94,11 @@ ros2 launch tb3_bringup sim_bringup.launch.py             # turtlebot3_world (ob
 ros2 launch tb3_bringup sim_house.launch.py               # turtlebot3_house (indoor rooms)
 ros2 launch tb3_bringup sim_bringup.launch.py headless:=true  # headless (no GUI)
 
+# M3 autonomous launches (run alongside sim_bringup):
+ros2 launch tb3_bringup wanderer.launch.py    # lidar_monitor + wanderer
+ros2 launch tb3_bringup slam.launch.py        # slam_toolbox online_async → /map
+ros2 launch tb3_bringup nav2.launch.py        # Nav2 stack (needs slam for map→odom TF)
+
 # Run tests — subcommands: m1, m2, m3, all (headless by default)
 bash scripts/run_tests.sh all            # all milestones, headless
 bash scripts/run_tests.sh m2 --gui      # M2 only, with Gazebo GUI (needs xhost +local:docker)
@@ -116,11 +124,17 @@ turtlebot3/
 │   ├── tb3_bringup/                # Launch files, worlds, config (ament_python)
 │   │   ├── config/bridge_params.yaml
 │   │   ├── config/teleop_twist_joy.yaml # Joystick axis/button mapping
+│   │   ├── config/slam_params.yaml      # slam_toolbox online_async (M3)
+│   │   ├── config/nav2_params.yaml      # Nav2 tuned for TB3 Burger (M3)
 │   │   ├── worlds/tb3_warehouse.world   # turtlebot3_world env + TB3 embedded
 │   │   ├── worlds/tb3_house.world       # turtlebot3_house env + TB3 embedded
-│   │   └── launch/sim_bringup.launch.py, sim_house.launch.py, teleop.launch.py, gamepad.launch.py
-│   └── tb3_controller/             # Gamepad manager (ament_python) — M2 complete
-│                                   # wanderer_node, patrol_node added in M3
+│   │   └── launch/sim_bringup.launch.py, sim_house.launch.py, teleop.launch.py,
+│   │           gamepad.launch.py, wanderer.launch.py, slam.launch.py, nav2.launch.py
+│   ├── tb3_controller/             # Gamepad manager + wanderer (ament_python)
+│   │                               # M2: gamepad_manager_node; M3: wanderer_node
+│   │                               # patrol_node added in Phase 3.3
+│   └── tb3_monitor/                # LiDAR monitor (ament_python) — Phase 3.1
+│                                   # lidar_monitor_node: /scan → /closest_obstacle
 ├── docs/                           # spec, dev plan, user guides
 └── input/                          # vision, prompts, methodology
 ```
@@ -132,11 +146,13 @@ turtlebot3/
 - **`gz` binary**: at `/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz`, added to PATH in Dockerfiles.
 - **`/map` is 0x0 until robot moves**: slam_toolbox publishes empty map initially.
 - **Always source both**: `source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash` before any `ros2` CLI.
+- **`async_slam_toolbox_node` is a lifecycle node**: spawning it with `Node()` leaves it unconfigured (no `/scan` sub, no `/map` pub). Use slam_toolbox's `online_async_launch.py` which handles CONFIGURE→ACTIVATE automatically.
+- **`ros2 service call` without `timeout` hangs**: if the service is unavailable, call blocks forever. Always prefix with `timeout 20 ros2 service call ...` in scripts.
 
 ## Key Reference Documents
 
 - **Requirements**: `input/my-vision.md`
 - **Specification**: `docs/specification.md` — full system architecture, ROS interfaces table, tf2 frame tree, gotcha cross-references (G1-G26), package specs, and all 5 milestone definitions
 - **Development Plan**: `docs/development-plan.md` — living document; phase status, decisions log, change log
-- **Gotchas**: `.claude/rules/gotchas.md` — 26 proven pitfalls with workarounds
+- **Gotchas**: `.claude/rules/gotchas.md` — 28 proven pitfalls with workarounds
 - **Methodology**: `input/README.md` — document-driven workflow diagram
