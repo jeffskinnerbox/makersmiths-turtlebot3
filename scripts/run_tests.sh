@@ -241,7 +241,84 @@ run_m2() {
 # ── Milestone 3 ───────────────────────────────────────────────────────────────
 run_m3() {
     _head "Milestone 3: Autonomous Capabilities"
-    _skip "M3 tests not yet implemented (Phase 3.x)"
+
+    # ── Build check ───────────────────────────────────────────────────────────
+    echo "  Workspace (all 3 packages):"
+
+    run_test "T3.1d  colcon build (tb3_monitor + tb3_controller + tb3_bringup)" \
+        docker exec turtlebot3_simulator bash -c \
+            "source /opt/ros/jazzy/setup.bash && cd ~/ros2_ws && colcon build --event-handlers console_direct-"
+
+    # ── Unit tests ────────────────────────────────────────────────────────────
+    echo "  Unit tests (pytest):"
+
+    run_test "T3.1u-mon  pytest tb3_monitor" \
+        docker exec turtlebot3_simulator bash -c \
+            "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash 2>/dev/null || true && \
+             cd ~/ros2_ws && python3 -m pytest src/tb3_monitor/test/ -q --tb=short 2>&1"
+
+    run_test "T3.1u-ctl  pytest tb3_controller (wanderer logic)" \
+        docker exec turtlebot3_simulator bash -c \
+            "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash 2>/dev/null || true && \
+             cd ~/ros2_ws && python3 -m pytest src/tb3_controller/test/test_wanderer_logic.py -q --tb=short 2>&1"
+
+    # ── Integration: sim + wanderer (headless) ────────────────────────────────
+    echo "  Integration (headless sim + wanderer):"
+
+    local wand_results
+    wand_results=$(docker exec turtlebot3_simulator bash -c "
+        source /opt/ros/jazzy/setup.bash
+        source ~/ros2_ws/install/setup.bash 2>/dev/null || true
+
+        ros2 launch tb3_bringup sim_bringup.launch.py headless:=true > /tmp/sim3.log 2>&1 &
+        SIMPID=\$!
+        sleep 15
+
+        ros2 launch tb3_bringup wanderer.launch.py > /tmp/wand.log 2>&1 &
+        WANDPID=\$!
+        sleep 12
+
+        # T3.1c: wanderer subscribes to /estop (checks early, doesn't block)
+        ros2 topic info /estop 2>/dev/null | grep -q 'Subscription count: [1-9]' \
+            && echo 'T3.1c:PASS' || echo 'T3.1c:FAIL'
+
+        # T3.1b: wanderer publishes /cmd_vel (node is running and driving)
+        timeout 8 ros2 topic echo /cmd_vel --once 2>/dev/null | grep -q 'linear' \
+            && echo 'T3.1b:PASS' || echo 'T3.1b:FAIL'
+
+        # T3.1a: /closest_obstacle publishes Float32 values (checked last — new topic needs DDS time)
+        timeout 10 ros2 topic echo /closest_obstacle --once 2>/dev/null | grep -q 'data:' \
+            && echo 'T3.1a:PASS' || echo 'T3.1a:FAIL'
+
+        kill \$WANDPID 2>/dev/null || true
+        kill \$SIMPID 2>/dev/null || true
+        sleep 2
+    " 2>/dev/null) || true
+
+    for marker in T3.1a T3.1b T3.1c; do
+        case $marker in
+            T3.1a) label="T3.1a  /closest_obstacle publishes Float32" ;;
+            T3.1b) label="T3.1b  wanderer publishes /cmd_vel" ;;
+            T3.1c) label="T3.1c  wanderer subscribes to /estop" ;;
+        esac
+        if echo "$wand_results" | grep -q "${marker}:PASS"; then
+            _pass "$label"
+        else
+            _fail "$label"
+        fi
+    done
+
+    if $GUI; then
+        echo "  Manual tests:"
+        _skip "T3.1b-man  Wanderer runs 60s without collision in turtlebot3_world"
+        _skip "T3.1c-man  Press B (gamepad) → wanderer stops; press A → resumes"
+        echo
+        echo "  To run manual M3 tests:"
+        echo "    1. bash scripts/attach_terminal.sh turtlebot3_simulator"
+        echo "    2. ros2 launch tb3_bringup sim_bringup.launch.py"
+        echo "    3. ros2 launch tb3_bringup wanderer.launch.py"
+        echo "    4. (optional) ros2 launch tb3_bringup gamepad.launch.py  # for e-stop"
+    fi
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────

@@ -30,6 +30,8 @@ Both containers use `network_mode: host`, Fast-DDS (`rmw_fastrtps_cpp`), and `GZ
 
 **Next step**: Milestone 3 — Phase 3.1 LiDAR Monitor + Wanderer.
 
+**Package build order**: `tb3_monitor` → `tb3_controller` → `tb3_bringup` (tb3_monitor has no in-project deps; tb3_bringup launch files reference both).
+
 ## Development Methodology
 
 Document-driven, phased approach with test-gates (see `input/README.md` for diagram):
@@ -55,6 +57,7 @@ Document-driven, phased approach with test-gates (see `input/README.md` for diag
 - **Headless testing**: `headless:=true` on `sim_bringup.launch.py`
 - **Gamepad**: `ros-jazzy-joy` uses SDL2 — needs `/dev/input` bind-mount + `device_cgroup_rules: ["c 13:* rmw"]` + `group_add: ["102"]`; `joy_node` must have `use_sim_time: False`
 - **E-stop**: teleop → `/cmd_vel_raw` → `gamepad_manager` → `/cmd_vel`; B=stop, A=clear, Y=shutdown
+- **F310 (D-mode) mapping**: axis[0]=Left-X(yaw), axis[4]=Right-Y(linear); btn[0]=A(clear), btn[1]=B(estop), btn[3]=Y(shutdown); RB (btn[5]) is deadman hold
 
 ## Session Start Convention
 
@@ -88,9 +91,9 @@ ros2 launch tb3_bringup sim_bringup.launch.py             # turtlebot3_world (ob
 ros2 launch tb3_bringup sim_house.launch.py               # turtlebot3_house (indoor rooms)
 ros2 launch tb3_bringup sim_bringup.launch.py headless:=true  # headless (no GUI)
 
-# Run all tests
-bash scripts/run_tests.sh all            # headless
-bash scripts/run_tests.sh all --gui      # with Gazebo GUI (needs xhost +local:docker)
+# Run tests — subcommands: m1, m2, m3, all (headless by default)
+bash scripts/run_tests.sh all            # all milestones, headless
+bash scripts/run_tests.sh m2 --gui      # M2 only, with Gazebo GUI (needs xhost +local:docker)
 
 # Run a single pytest test (inside container)
 docker exec turtlebot3_simulator bash -c \

@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'tb3_controller'
+package_name = 'tb3_monitor'
 
 setup(
     name=package_name,
@@ -15,13 +15,12 @@ setup(
     zip_safe=True,
     maintainer='Jeff',
     maintainer_email='jeff@makersmiths.org',
-    description='Gamepad controller and autonomous capabilities for TurtleBot3',
+    description='LiDAR and health monitoring nodes for TurtleBot3',
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'gamepad_manager = tb3_controller.gamepad_manager_node:main',
-            'wanderer = tb3_controller.wanderer_node:main',
+            'lidar_monitor = tb3_monitor.lidar_monitor_node:main',
         ],
     },
 )
