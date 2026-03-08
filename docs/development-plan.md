@@ -368,6 +368,7 @@ These must be investigated before or during the indicated phase. Record results 
 * `src/tb3_monitor/tb3_monitor/health_monitor_node.py` — subscribes `/battery_state` + `/imu`, logs at 1 Hz; mock battery publisher for sim
 * `src/tb3_monitor/tb3_monitor/tf2_verifier.py` — checks `map→base_link` transform exists and is recent (< 1s); exit 0/1
 * `src/tb3_controller/tb3_controller/scan_action_server.py` — 360° rotation action server with degree-progress feedback
+* **RViz integration** (deferred from Phase 3.3) — add `rviz2` to `capability_demo.launch.py` with a TB3 config showing costmap, planned path, and `/map`. Discuss with user before implementing.
 
 **Required deliverables**:
 * `docs/user-guide-milestone-3.md`
