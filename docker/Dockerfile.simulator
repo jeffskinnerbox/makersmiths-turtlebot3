@@ -1,0 +1,81 @@
+# ============================================================
+# TurtleBot3 Simulator Image
+# Base: osrf/ros:jazzy-desktop-full + TB3/Nav2/SLAM/Gazebo
+# ============================================================
+ARG ROS_DISTRO=jazzy
+FROM osrf/ros:${ROS_DISTRO}-desktop-full
+
+SHELL ["/bin/bash", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+# Install TB3, Nav2, SLAM, Gazebo bridge, teleop, FastDDS, joy, mesa
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    curl \
+    wget \
+    python3-pip \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    python3-vcstool \
+    tmux \
+    vim \
+    mesa-utils \
+    libgl1-mesa-dri \
+    x11-apps \
+    ros-${ROS_DISTRO}-turtlebot3 \
+    ros-${ROS_DISTRO}-turtlebot3-msgs \
+    ros-${ROS_DISTRO}-turtlebot3-gazebo \
+    ros-${ROS_DISTRO}-nav2-bringup \
+    ros-${ROS_DISTRO}-slam-toolbox \
+    ros-${ROS_DISTRO}-ros-gz-bridge \
+    ros-${ROS_DISTRO}-ros-gz-sim \
+    ros-${ROS_DISTRO}-teleop-twist-keyboard \
+    ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
+    ros-${ROS_DISTRO}-joy \
+    ros-${ROS_DISTRO}-teleop-twist-joy \
+    && rm -rf /var/lib/apt/lists/*
+
+# rosdep init (idempotent)
+RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
+      rosdep init; \
+    fi
+
+# G2: osrf image ships ubuntu at UID 1000 — remove before creating ros_user
+ARG USERNAME=ros_user
+ARG USER_UID=1000
+ARG USER_GID=${USER_UID}
+RUN userdel -r ubuntu 2>/dev/null || true && \
+    groupadd --gid ${USER_GID} ${USERNAME} 2>/dev/null || true && \
+    useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} && \
+    echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+
+RUN rosdep update --rosdistro=${ROS_DISTRO}
+
+RUN mkdir -p ~/ros2_ws/src
+WORKDIR /home/${USERNAME}/ros2_ws
+
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc && \
+    echo "[ -f ~/ros2_ws/install/setup.bash ] && source ~/ros2_ws/install/setup.bash" >> ~/.bashrc && \
+    echo "export TURTLEBOT3_MODEL=burger" >> ~/.bashrc
+
+# G14: Fast-DDS (CycloneDDS hangs on hosts with many bridge/veth interfaces)
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ENV ROS_DOMAIN_ID=0
+ENV TURTLEBOT3_MODEL=burger
+ENV ROS_DISTRO=${ROS_DISTRO}
+
+# G15: gz-transport uses multicast — force loopback so ros_gz_bridge connects
+ENV GZ_IP=127.0.0.1
+
+# G7: gz binary not in standard PATH; also add /opt/ros/jazzy/bin (not set by base image ENV)
+ENV PATH=/opt/ros/${ROS_DISTRO}/opt/gz_tools_vendor/bin:/opt/ros/${ROS_DISTRO}/bin:${PATH}
+
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]

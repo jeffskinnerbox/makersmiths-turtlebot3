@@ -1,0 +1,53 @@
+# ============================================================
+# TurtleBot3 — Two-Container Compose
+# Both containers: network_mode: host + ipc: host (required for DDS)
+# G14: RMW_IMPLEMENTATION=rmw_fastrtps_cpp (CycloneDDS hangs on multi-veth hosts)
+# G15: GZ_IP=127.0.0.1 (gz-transport multicast → loopback)
+# G1:  build/run with: sg docker -c "bash scripts/build.sh"
+# ============================================================
+
+x-ros-common: &ros-common
+  environment:
+    - ROS_DISTRO=jazzy
+    - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+    - ROS_DOMAIN_ID=0
+    - TURTLEBOT3_MODEL=burger
+    - GZ_IP=127.0.0.1
+    - DISPLAY=${DISPLAY:-:0}
+  volumes:
+    - ../src:/home/ros_user/ros2_ws/src
+    - ../scripts:/home/ros_user/ros2_ws/scripts
+    - ../config:/home/ros_user/ros2_ws/config
+    - ../.colcon:/home/ros_user/.colcon
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    # Uncomment if .Xauthority exists on host (needed for some X11 setups):
+    # - ${HOME}/.Xauthority:/home/ros_user/.Xauthority:ro
+  network_mode: host
+  ipc: host
+  stdin_open: true
+  tty: true
+  restart: unless-stopped
+
+services:
+  turtlebot3_simulator:
+    <<: *ros-common
+    container_name: turtlebot3_simulator
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.simulator
+      args:
+        ROS_DISTRO: jazzy
+    # G3: start detached with sleep infinity; user attaches via attach_terminal.sh
+    command: sleep infinity
+
+  turtlebot3_robot:
+    <<: *ros-common
+    container_name: turtlebot3_robot
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.turtlebot
+    command: sleep infinity
+    # Phase 5 (hardware): uncomment to add RPi serial/USB devices
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+    #   - /dev/ttyACM0:/dev/ttyACM0

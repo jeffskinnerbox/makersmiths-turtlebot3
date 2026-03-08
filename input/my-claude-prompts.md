@@ -77,6 +77,7 @@ and use this information to guide the creation of the ROS 2 devcontainer:
 ---
 
 ## Creation of ROS2 Architect Skill - NOT USED
+I used a more generic ROS2 Architect Skill I found on the Internet.
 ### 2nd Claude Code Prompt
 Create for me a `SKILL.md` file, with skill name of "ros_architect",
 for a highly skilled architect of ROS 2 Jazzy autonomous robot solutions.
@@ -85,6 +86,7 @@ Place the created skill document in @/.claude/skills/ros_architect/.
 
 
 ## Creation of ROS2 Developer Skill - NOT USED
+I used a more generic ROS2 Developer Skill I found on the Internet.
 ### 2nd Claude Code Prompt
 Create for me a `SKILL.md` file, with skill name of "ros_developer",
 for a highly skilled developer/coder of ROS 2 Jazzy autonomous robot solutions.
@@ -93,6 +95,7 @@ All code should be well documented.
 Place the created skill document in @/.claude/skills/ros_developer/.
 
 ## Creation of ROS2 Autonomous Robotics Test Engineer - NOT USED
+I used a more generic ROS2 Tester Skill I found on the Internet.
 ### 2nd Claude Code Prompt
 Create for me a `SKILL.md` file, with skill name of "ros_tester",
 for a highly skilled tester of ROS 2 Jazzy autonomous robot solutions.
@@ -112,7 +115,7 @@ Place this in an appendix and reference it at the beginning of the specification
 and anywhere else in the text when its a useful reference.
 
 In a subsequent phase, I need this this specification document to help prepare a detailed development plan.
-Think Hard about what must be specified in the specification document so a robust development plan can be created.
+Think Very Hard about what must be specified in the specification document so a robust development plan can be created.
 
 Use the AskUserQuestions tool for all things that require further clarification.
 
@@ -122,6 +125,7 @@ Use the AskUserQuestions tool for all things that require further clarification.
 ### 4th Claude Code Prompt
 Read @/input/my-vision.md and @/docs/specification.md and create a development plan, to be called @/docs/development-plan.md,
 describing how & when thing are to be created / build.
+If an architecture document is created, also put that in @/docs/.
 The development plan must reflecting an incrementally build approach with testing after each increment.
 
 Make sure to cover the all major software components and their build order,

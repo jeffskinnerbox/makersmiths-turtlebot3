@@ -25,6 +25,23 @@ You'll find two key documents:
 I used a simple methodology to tease out Claude Code's help on this project,
 and that is illustrated below:
 
+The typical flow for a complex project is:
+
+```text
+my-vision.md → Architecture → Specification → Development Plan
+```
+
+* Architecture doc: high-level decisions — node graph, communication patterns (topics vs services vs actions), package
+  decomposition, frame tree, container boundaries. Done before you know what to build in detail.
+* Specification: fills in the details — exact message types, QoS settings, parameters, test-gates, milestone definitions.
+   Requires the architecture to already be settled.
+
+In this project, that order got collapsed — the spec was written directly from the vision, so it does architecture and
+specification work in one document.
+
+The current project skipped step 1 but got away with it because the architecture is relatively simple (two containers,
+standard TB3 stack). For a more complex system it would matter more.
+
 ```text
    SKILL.md           my-vision.md --> specification.md --> development-plan.md
       ^                    ^                 ^                     ^

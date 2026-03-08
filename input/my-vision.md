@@ -35,7 +35,8 @@ I envision the following major milestone within this phased plan:
    When complete, perform all previous test-gates again,
    create a user guide document (called `user-guide-milestone-1.md`) written so all tests can be manually repeated.
 1. **2nd Milestone:** Within the simulator container,
-   add ROS2 packages to manually control the TurtleBot3 via a [Logitech F310 Gamepad][07].
+   add ROS2 packages to manually control the TurtleBot3 via a [Logitech F310 Gamepad][07]
+   using the [`joy`][11] and [`teleop_twist_joy`][12] ROS2 packages.
    The gamepad's left joystick should control the direction the robot with travel
    and the right joystick will control the speed forward or reverse.
    One of the gamepad buttons should code as an emergency stop (red button)
@@ -58,7 +59,17 @@ I envision the following major milestone within this phased plan:
    The execution of these test must be observable by the human operator via Gazebo.
    When complete, perform all previous test-gates again,
    create a user guide document (called `user-guide-milestone-3.md`) written so all tests can be manually repeated.
-1. **4th Milestone:** The turtlebot container should to be moved to the Raspberry Pi 4 on the TurtleBot3.
+1. **4th Milestone:** I want to monitor the TurtleBot3 ROS2 nodes for there status.
+   I would like to use TMUX to display all the nodes in a single terminal window.
+   I want to login to the TurtleBot3 container instance
+   and have the TMUX screen self configure to display the status of all the nodes.
+   To achieve this, I expect to use a [Tmuxinator][09] script
+   or a custom bash script that leverages [Tmux][10] ability to split panes via the command line.
+   The execution of test-gates must be observable by the human operator via via the monitoring terminal screen.
+   No need to execute previous test-gates.
+   When completed, create a user guide document (called `user-guide-milestone-4.md`)
+   written so all tests can be manually repeated.
+1. **5th Milestone:** The turtlebot container should to be moved to the Raspberry Pi 4 on the TurtleBot3.
    The Raspberry Pi needs to have Ubuntu 24.04 installed, followed by Docker, and the turtlebot container.
    The simulator container should be installed on another Ubuntu 24.04 system, called NucBoxM6,
    along with the F310 Gamepad.
@@ -78,4 +89,8 @@ I envision the following major milestone within this phased plan:
 [06]:https://gazebosim.org/docs/harmonic/ros_installation/
 [07]:https://www.logitechg.com/en-us/shop/p/f310-gamepad
 [08]:https://store-us.gl-inet.com/products/slate-ax-gl-axt1800-gigabit-wireless-router
+[09]:https://medium.com/@johanjohansson_63760/how-to-use-tmux-and-tmuxinator-efficiently-f58ccdd46406
+[10]:https://blog.petrzemek.net/2016/02/11/my-tmux-configuration/
+[11]:https://docs.ros.org/en/jazzy/p/joy/
+[12]:https://docs.ros.org/en/jazzy/p/teleop_twist_joy/
 
