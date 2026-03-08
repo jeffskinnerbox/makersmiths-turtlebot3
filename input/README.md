@@ -28,19 +28,42 @@ and that is illustrated below:
 The typical flow for a complex project is:
 
 ```text
-my-vision.md → Architecture → Specification → Development Plan
+1st Step: Create the Claude skills you need for your project.
+          SKILL.md
+
+2nd Step: Create documentation to guide Claude's execution of the project.
+          my-vision.md → architecture.md → specification.md → development-plan.md
 ```
 
-* Architecture doc: high-level decisions — node graph, communication patterns (topics vs services vs actions), package
-  decomposition, frame tree, container boundaries. Done before you know what to build in detail.
-* Specification: fills in the details — exact message types, QoS settings, parameters, test-gates, milestone definitions.
-   Requires the architecture to already be settled.
+* **`my-vision.md` - High-level intent.**
+  What robot, what behaviors, what constraints.
+  No ROS specifics are required (unless you definitely want them)
+  — just goals, milestones, timing/sequence, how to organization, and other things you want.
+  **This is the "why."**
+* **`architecture.md` - High-level decisions.**
+  The node graph, communication patterns (topics vs services vs actions), package
+  decomposition, tf2 frame tree, DDS config, key trade-offs, abd container boundaries.
+  Done before you know what to build in detail.
+  **This is the "what."**
+* **`specification.md` - Detailed formal contract.**
+  Specifies every node's interfaces (pub/sub/srv/action), exact message types, QoS settings, parameters,
+  test-gates, launch file behavior, and acceptance criteria per milestone.
+  Requires the architecture to already be settled with only minor questions/issues.
+  **This is the "how it must behave.**
+* **`development-plan.md` - Phased execution plan.**
+  The ordered phase and sequencing of work to be done, colcon build targets, test-gates (pytest + launch_testing),
+  and open issues and decisions log.
+  Each phase is small enough to validate via test-gates before proceeding to next phase.
+  **This is the "how we build it."**
 
-In this project, that order got collapsed — the spec was written directly from the vision, so it does architecture and
-specification work in one document.
+The chain enforces discipline. Each document constrains the next,
+and later documents can't contradict earlier ones without a deliberate decision logged.
 
-The current project skipped step 1 but got away with it because the architecture is relatively simple (two containers,
-standard TB3 stack). For a more complex system it would matter more.
+In this project, that order got collapsed — the specification was written directly from the vision,
+so it does architecture and specification work in one document.
+This is OK with the current project because the architecture is relatively simple
+(two containers, standard TB3 stack).
+For a more complex system it would matter more.
 
 ```text
    SKILL.md           my-vision.md --> specification.md --> development-plan.md

@@ -59,7 +59,6 @@ in a visitor-friendly demonstration system operable by non-technical Makersmiths
 | Network (deployment) | [GL.iNet GL-AXT1800][glinet] travel router, SSID "JeffTravelRouter-2.4" |
 | Development machine | NucBoxM6 (Ubuntu 24.04) |
 
-[aws-warehouse]: https://docs.ros.org/en/jazzy/p/aws_robomaker_small_warehouse_world/
 [f310]: https://www.logitechg.com/en-us/shop/p/f310-gamepad
 [glinet]: https://store-us.gl-inet.com/products/slate-ax-gl-axt1800-gigabit-wireless-router
 

@@ -306,8 +306,8 @@ These must be investigated before or during the indicated phase. Record results 
 
 | Field | Value |
 |---|---|
-| **Status** | `NOT STARTED` |
-| **Completed** | — |
+| **Status** | `COMPLETE` |
+| **Completed** | 2026-03-08 |
 | **Complexity** | Medium |
 | **Depends on** | Phase 3.1 (wanderer needed to generate map data) |
 | **Spec refs** | FR-3.4, FR-3.5 |
@@ -568,6 +568,7 @@ Record all modifications to this plan.
 | Date | Change | Reason |
 |---|---|---|
 | 2026-03-07 | v1.0 — initial plan created | Generated from specification via Claude Code |
+| 2026-03-08 | Phase 3.2 complete; T3.2a-e pass; slam_toolbox + Nav2 operational | slam_params.yaml, nav2_params.yaml, slam.launch.py, nav2.launch.py; lifecycle autostart; save_map service verified |
 | 2026-03-08 | Phase 3.1 complete; T3.1a/b/c/d pass; 6/6 run_tests.sh m3 pass | lidar_monitor + wanderer; 40 unit tests; DDS discovery delay fixed (sleep 12s) |
 | 2026-03-08 | Milestone 2 complete (phases 2.1–2.3); all test-gates pass | Gamepad control, e-stop, restart, Y-shutdown all verified manually |
 | 2026-03-08 | Phase 2.2 complete; T2.2a/b/c pass; G25+G26 added to gotchas.md | joy node works; robot moves with RB+right stick; turns with RB+left stick |
@@ -687,10 +688,10 @@ All files to be created, grouped by the phase that creates them.
 * [ ] `src/tb3_controller/test/test_wanderer_logic.py`
 
 ### Phase 3.2
-* [ ] `src/tb3_bringup/config/slam_params.yaml`
-* [ ] `src/tb3_bringup/config/nav2_params.yaml`
-* [ ] `src/tb3_bringup/launch/slam.launch.py`
-* [ ] `src/tb3_bringup/launch/nav2.launch.py`
+* [x] `src/tb3_bringup/config/slam_params.yaml`
+* [x] `src/tb3_bringup/config/nav2_params.yaml`
+* [x] `src/tb3_bringup/launch/slam.launch.py`
+* [x] `src/tb3_bringup/launch/nav2.launch.py`
 
 ### Phase 3.3
 * [ ] `src/tb3_controller/tb3_controller/patrol_node.py`

@@ -13,6 +13,7 @@
 - Host: `xhost +local:docker` run once per login session (for Gazebo GUI)
 
 Verify the F310 is detected:
+
 ```bash
 cat /proc/bus/input/devices | grep "F310"
 # Should show: N: Name="Logitech Gamepad F310"
@@ -23,6 +24,7 @@ cat /proc/bus/input/devices | grep "F310"
 ## Quick Start
 
 **Terminal 1** — Simulation:
+
 ```bash
 bash scripts/attach_terminal.sh turtlebot3_simulator
 source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
@@ -30,6 +32,7 @@ ros2 launch tb3_bringup sim_bringup.launch.py
 ```
 
 **Terminal 2** — Gamepad:
+
 ```bash
 bash scripts/attach_terminal.sh turtlebot3_simulator
 source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
@@ -82,6 +85,7 @@ Speed limits: normal 0.22 m/s, turbo 0.4 m/s.
 | `/estop` | `std_msgs/Bool` | E-stop state (latched) |
 
 Monitor e-stop state:
+
 ```bash
 ros2 topic echo /estop
 ```

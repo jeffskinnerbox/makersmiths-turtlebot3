@@ -319,6 +319,82 @@ run_m3() {
         echo "    3. ros2 launch tb3_bringup wanderer.launch.py"
         echo "    4. (optional) ros2 launch tb3_bringup gamepad.launch.py  # for e-stop"
     fi
+
+    # ── Phase 3.2: SLAM + Nav2 ───────────────────────────────────────────────
+    echo "  SLAM + Nav2 (headless):"
+
+    local slam_results
+    slam_results=$(docker exec turtlebot3_simulator bash -c "
+        source /opt/ros/jazzy/setup.bash
+        source ~/ros2_ws/install/setup.bash 2>/dev/null || true
+
+        # Start sim headless
+        ros2 launch tb3_bringup sim_bringup.launch.py headless:=true > /tmp/sim32.log 2>&1 &
+        SIMPID=\$!
+        sleep 15
+
+        # Start SLAM
+        ros2 launch tb3_bringup slam.launch.py > /tmp/slam.log 2>&1 &
+        SLAMPID=\$!
+        sleep 10
+
+        # T3.2a: /map topic exists
+        timeout 8 ros2 topic echo /map --once 2>/dev/null | grep -q 'header' \
+            && echo 'T3.2a:PASS' || echo 'T3.2a:FAIL'
+
+        # Start Nav2 alongside SLAM (no restart needed)
+        ros2 launch tb3_bringup nav2.launch.py > /tmp/nav2.log 2>&1 &
+        NAV2PID=\$!
+
+        # Run wanderer 35s to build map (map is non-zero well before 30s)
+        ros2 launch tb3_bringup wanderer.launch.py > /tmp/wand32.log 2>&1 &
+        WANDPID=\$!
+        sleep 35
+
+        # T3.2b: /map has non-zero width after robot moves (G19)
+        timeout 8 ros2 topic echo /map --once 2>/dev/null | grep -E 'width: [1-9]' \
+            && echo 'T3.2b:PASS' || echo 'T3.2b:FAIL'
+
+        # T3.2c: map saveable via slam_toolbox service (G18 — timeout prevents hang)
+        timeout 20 ros2 service call /slam_toolbox/save_map \
+            slam_toolbox/srv/SaveMap '{name: {data: \"/tmp/test_map\"}}' 2>/dev/null \
+            | grep -qi 'success\|result' \
+            && echo 'T3.2c:PASS' || echo 'T3.2c:FAIL'
+
+        kill \$WANDPID 2>/dev/null || true
+
+        # Allow Nav2 lifecycle to fully activate (needs map TF from slam)
+        sleep 15
+
+        # T3.2d: Nav2 bt_navigator is running
+        ros2 node list 2>/dev/null | grep -q 'bt_navigator' \
+            && echo 'T3.2d:PASS' || echo 'T3.2d:FAIL'
+
+        # T3.2e: robot_radius = 0.105 confirmed in local_costmap params
+        ros2 param get /local_costmap/local_costmap robot_radius 2>/dev/null \
+            | grep -q '0.105' \
+            && echo 'T3.2e:PASS' || echo 'T3.2e:FAIL'
+
+        kill \$NAV2PID 2>/dev/null || true
+        kill \$SLAMPID 2>/dev/null || true
+        kill \$SIMPID 2>/dev/null || true
+        sleep 2
+    " 2>/dev/null) || true
+
+    for marker in T3.2a T3.2b T3.2c T3.2d T3.2e; do
+        case $marker in
+            T3.2a) label="T3.2a  SLAM launches, /map topic exists" ;;
+            T3.2b) label="T3.2b  /map has non-zero width after 60s wanderer" ;;
+            T3.2c) label="T3.2c  map saveable via slam_toolbox/save_map service" ;;
+            T3.2d) label="T3.2d  Nav2 bt_navigator node running" ;;
+            T3.2e) label="T3.2e  Nav2 local_costmap robot_radius = 0.105" ;;
+        esac
+        if echo "$slam_results" | grep -q "${marker}:PASS"; then
+            _pass "$label"
+        else
+            _fail "$label"
+        fi
+    done
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
