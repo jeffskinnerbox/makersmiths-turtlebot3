@@ -333,7 +333,7 @@ These must be investigated before or during the indicated phase. Record results 
 
 | Field | Value |
 |---|---|
-| **Status** | `NOT STARTED` |
+| **Status** | `IN PROGRESS` |
 | **Completed** | — |
 | **Complexity** | Medium |
 | **Depends on** | Phase 3.2 |
@@ -559,7 +559,7 @@ Record all technical decisions made during execution.
 | 2026-03-08 | 2.3 | E-stop via /cmd_vel_raw relay: teleop → /cmd_vel_raw → gamepad_manager → /cmd_vel | Cleaner than dual-publisher fight; gamepad_manager gates all motion |
 | 2026-03-08 | 2.3 | Y button: sends SIGINT to process group, exits all gamepad nodes | Full auto-reboot deferred to Phase 5 hardware (systemd watchdog or docker restart policy) |
 | 2026-03-08 | 2.3 | Button edge detection: prev=[0]*len on first message, not prev=buttons | First button press was never detected; fix applied in node and test stub |
-| 2026-03-08 | 3.1 | Wanderer uses RELIABLE+TRANSIENT_LOCAL for /estop; defaults _estop=False | Gets latched estop state on subscribe; operates autonomously without gamepad |
+| 2026-03-08 | 3.1 | Wanderer uses RELIABLE+TRANSIENT_LOCAL for /estop; defaults_estop=False | Gets latched estop state on subscribe; operates autonomously without gamepad |
 | 2026-03-08 | 3.1 | DDS discovery delay: integration tests wait 12s after wanderer launch before checking new topics | Fast-DDS needs >6s to discover brand-new topics with no prior publishers |
 | 2026-03-08 | 3.2 | D6: Nav2 inflation_radius=0.55 for turtlebot3_world | Standard TB3 default; robot_radius=0.105 (FR-3.4); max_vel_x=0.22 (FR-3.4) |
 | 2026-03-08 | 3.2 | `async_slam_toolbox_node` is a lifecycle node — must use slam_toolbox's online_async_launch.py | Direct `Node()` spawn leaves it unconfigured; no /scan sub, no /map pub; lifecycle autostart handles CONFIGURE→ACTIVATE |
@@ -701,9 +701,9 @@ All files to be created, grouped by the phase that creates them.
 * [x] `src/tb3_bringup/launch/nav2.launch.py`
 
 ### Phase 3.3
-* [ ] `src/tb3_controller/tb3_controller/patrol_node.py`
-* [ ] `src/tb3_bringup/launch/capability_demo.launch.py`
-* [ ] `src/tb3_controller/test/test_patrol_logic.py`
+* [x] `src/tb3_controller/tb3_controller/patrol_node.py`
+* [x] `src/tb3_bringup/launch/capability_demo.launch.py`
+* [x] `src/tb3_controller/test/test_patrol_logic.py`
 
 ### Phase 3.4
 * [ ] `src/tb3_monitor/tb3_monitor/health_monitor_node.py` (optional)

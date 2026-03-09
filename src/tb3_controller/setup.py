@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'gamepad_manager = tb3_controller.gamepad_manager_node:main',
             'wanderer = tb3_controller.wanderer_node:main',
+            'patrol = tb3_controller.patrol_node:main',
         ],
     },
 )
