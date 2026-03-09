@@ -395,6 +395,107 @@ run_m3() {
             _fail "$label"
         fi
     done
+
+    # ── Phase 3.3: Patrol node + capability_demo launch ───────────────────────
+    echo "  Unit tests (patrol logic):"
+
+    run_test "T3.3u  pytest patrol logic" \
+        docker exec turtlebot3_simulator bash -c \
+            "source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash 2>/dev/null || true && \
+             cd ~/ros2_ws && python3 -m pytest src/tb3_controller/test/test_patrol_logic.py -q --tb=short 2>&1"
+
+    echo "  capability_demo wanderer mode (T3.3c):"
+
+    local demo_wand_results
+    demo_wand_results=$(docker exec turtlebot3_simulator bash -c "
+        source /opt/ros/jazzy/setup.bash
+        source ~/ros2_ws/install/setup.bash 2>/dev/null || true
+
+        ros2 launch tb3_bringup sim_bringup.launch.py headless:=true > /tmp/sim33w.log 2>&1 &
+        SIMPID=\$!
+        sleep 15
+
+        ros2 launch tb3_bringup capability_demo.launch.py mode:=wanderer > /tmp/demo_wand.log 2>&1 &
+        DPID=\$!
+        sleep 15
+
+        # T3.3c: wanderer node is running
+        ros2 node list 2>/dev/null | grep -q '/wanderer' \
+            && echo 'T3.3c:PASS' || echo 'T3.3c:FAIL'
+
+        # lidar_monitor always on regardless of mode
+        ros2 node list 2>/dev/null | grep -q '/lidar_monitor' \
+            && echo 'T3.3c_mon:PASS' || echo 'T3.3c_mon:FAIL'
+
+        kill \$DPID 2>/dev/null || true
+        kill \$SIMPID 2>/dev/null || true
+        sleep 2
+    " 2>/dev/null) || true
+
+    for marker in T3.3c T3.3c_mon; do
+        case $marker in
+            T3.3c)     label="T3.3c  mode:=wanderer starts wanderer node" ;;
+            T3.3c_mon) label="T3.3c  mode:=wanderer starts lidar_monitor node" ;;
+        esac
+        if echo "$demo_wand_results" | grep -q "${marker}:PASS"; then
+            _pass "$label"
+        else
+            _fail "$label"
+        fi
+    done
+
+    echo "  capability_demo patrol mode (T3.3d):"
+
+    local demo_patrol_results
+    demo_patrol_results=$(docker exec turtlebot3_simulator bash -c "
+        source /opt/ros/jazzy/setup.bash
+        source ~/ros2_ws/install/setup.bash 2>/dev/null || true
+
+        ros2 launch tb3_bringup sim_bringup.launch.py headless:=true > /tmp/sim33p.log 2>&1 &
+        SIMPID=\$!
+        sleep 15
+
+        ros2 launch tb3_bringup capability_demo.launch.py mode:=patrol > /tmp/demo_patrol.log 2>&1 &
+        DPID=\$!
+        sleep 20
+
+        # T3.3d: patrol node is running
+        ros2 node list 2>/dev/null | grep -q '/patrol' \
+            && echo 'T3.3d:PASS' || echo 'T3.3d:FAIL'
+
+        # lidar_monitor always on
+        ros2 node list 2>/dev/null | grep -q '/lidar_monitor' \
+            && echo 'T3.3d_mon:PASS' || echo 'T3.3d_mon:FAIL'
+
+        kill \$DPID 2>/dev/null || true
+        kill \$SIMPID 2>/dev/null || true
+        sleep 2
+    " 2>/dev/null) || true
+
+    for marker in T3.3d T3.3d_mon; do
+        case $marker in
+            T3.3d)     label="T3.3d  mode:=patrol starts patrol node" ;;
+            T3.3d_mon) label="T3.3d  mode:=patrol starts lidar_monitor node" ;;
+        esac
+        if echo "$demo_patrol_results" | grep -q "${marker}:PASS"; then
+            _pass "$label"
+        else
+            _fail "$label"
+        fi
+    done
+
+    if $GUI; then
+        echo "  Manual / integration tests (T3.3a, T3.3b):"
+        _skip "T3.3a  Patrol visits 3 waypoints (NavigateToPose SUCCEEDED each)"
+        _skip "T3.3b  E-stop (B) cancels patrol goal; clear (A) resumes"
+        echo
+        echo "  To test patrol navigation manually:"
+        echo "    1. ros2 launch tb3_bringup sim_bringup.launch.py"
+        echo "    2. ros2 launch tb3_bringup capability_demo.launch.py mode:=patrol"
+        echo "    3. Watch logs for 'Waypoint [N] reached!' messages"
+        echo "    4. Press B on gamepad → 'E-stop ACTIVE — cancelling active navigation goal'"
+        echo "    5. Press A → patrol resumes"
+    fi
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
