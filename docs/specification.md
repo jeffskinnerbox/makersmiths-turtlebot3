@@ -220,6 +220,7 @@ milestone sections. Full text is in [Appendix B](#appendix-b-known-gotchas-refer
 | G26 | Docker | YAML `<<:` anchor merge does NOT concat lists; per-service `volumes:` override replaces anchor volumes entirely |
 | G27 | SLAM | `async_slam_toolbox_node` is a lifecycle node; use `online_async_launch.py` with `autostart:=true`, not `Node()` directly |
 | G28 | ROS CLI | `ros2 service call` blocks indefinitely if server not up; always wrap with `timeout 20 ros2 service call ...` |
+| G29 | DDS | Stale FastRTPS SHM (`/dev/shm/fastrtps_*`) exhausts DDS ports after `pkill -9`; run `rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_*` after killing ROS processes in scripts |
 
 ---
 
@@ -689,6 +690,7 @@ Full text reproduced from `.claude/rules/gotchas.md` for self-contained readabil
 * **G26 — YAML merge (`<<: *anchor`) does NOT concat lists**: adding a `volumes:` key to a service that uses `<<: *ros-common` completely replaces the anchor's volumes list. Always put shared mounts in the anchor itself.
 * **G27 — `async_slam_toolbox_node` is a lifecycle node**: spawning it directly with `Node()` leaves it in unconfigured state — no `/scan` subscription, no `/map` publication. Use slam_toolbox's provided `online_async_launch.py` (with `autostart:=true`) which emits CONFIGURE → ACTIVATE lifecycle events automatically.
 * **G28 — `ros2 service call` blocks indefinitely if service is unavailable**: unlike topic echo which has a `--timeout` option, `ros2 service call` waits forever if the server isn't up. Always wrap with `timeout 20 ros2 service call ...` in scripts.
+* **G29 — Stale FastRTPS shared memory exhausts DDS ports after hard-killed processes**: `pkill -9` on ROS 2 nodes leaves orphaned files in `/dev/shm/fastrtps_*` and `/dev/shm/sem.fastrtps_*`. After many test runs, all DDS ports (7000+) are consumed and new nodes fail to communicate silently. Fix: always run `rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_*` after killing ROS processes in test scripts. Also avoid piping `ros2 service call` output — the pipe keeps bash alive even after `timeout` sends SIGTERM; instead redirect to a file and grep afterward.
 
 ---
 

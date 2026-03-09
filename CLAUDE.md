@@ -167,7 +167,7 @@ turtlebot3/
 ## Key Reference Documents
 
 - **Requirements**: `input/my-vision.md`
-- **Specification**: `docs/specification.md` — full system architecture, ROS interfaces table, tf2 frame tree, gotcha cross-references (G1-G26), package specs, and all 5 milestone definitions
+- **Specification**: `docs/specification.md` — full system architecture, ROS interfaces table, tf2 frame tree, gotcha cross-references (G1–G29), package specs, and all 5 milestone definitions
 - **Development Plan**: `docs/development-plan.md` — living document; phase status, decisions log, change log
 - **Gotchas**: `.claude/rules/gotchas.md` — 29 proven pitfalls with workarounds (G29: stale FastRTPS SHM)
 - **Methodology**: `input/README.md` — document-driven workflow diagram
