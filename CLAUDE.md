@@ -89,6 +89,27 @@ source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
 # Build ROS workspace inside container
 cd ~/ros2_ws && colcon build
 
+# Run a single pytest test file (no ROS running needed for unit tests)
+python3 -m pytest src/tb3_controller/test/test_wanderer_logic.py -q --tb=short
+
+# Run a single named test
+python3 -m pytest src/tb3_monitor/test/ -q -k 'test_min_distance'
+
+# colcon uses symlink-install (.colcon/defaults.yaml): Python *.py node files are
+# symlinked from install/ → src/, so edits take effect immediately without rebuild.
+# Exception: entry-point wrapper scripts (ros2 run ...) ARE generated files and
+# require a rebuild when adding/removing console_scripts in setup.py.
+
+# ros2 run entry points (after colcon build):
+#   ros2 run tb3_monitor lidar_monitor
+#   ros2 run tb3_monitor health_monitor
+#   ros2 run tb3_monitor mock_battery
+#   ros2 run tb3_monitor tf2_verifier
+#   ros2 run tb3_controller gamepad_manager
+#   ros2 run tb3_controller wanderer
+#   ros2 run tb3_controller patrol
+#   ros2 run tb3_controller scan_action_server
+
 # Launch simulation (two worlds available)
 ros2 launch tb3_bringup sim_bringup.launch.py             # turtlebot3_world (obstacle course)
 ros2 launch tb3_bringup sim_house.launch.py               # turtlebot3_house (indoor rooms)
@@ -160,3 +181,4 @@ turtlebot3/
 - **Development Plan**: `docs/development-plan.md` — living document; phase status, decisions log, change log
 - **Gotchas**: `.claude/rules/gotchas.md` — 29 proven pitfalls with workarounds (G29: stale FastRTPS SHM)
 - **Methodology**: `input/README.md` — document-driven workflow diagram
+- **M3 User Guide**: `docs/user-guide-milestone-3.md` — launch commands, topic reference, troubleshooting for wanderer/patrol/SLAM/Nav2/health monitoring
