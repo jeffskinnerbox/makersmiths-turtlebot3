@@ -21,6 +21,9 @@ setup(
     entry_points={
         'console_scripts': [
             'lidar_monitor = tb3_monitor.lidar_monitor_node:main',
+            'health_monitor = tb3_monitor.health_monitor_node:main',
+            'mock_battery = tb3_monitor.health_monitor_node:mock_battery_main',
+            'tf2_verifier = tb3_monitor.tf2_verifier:main',
         ],
     },
 )

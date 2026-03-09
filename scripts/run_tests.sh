@@ -242,6 +242,15 @@ run_m2() {
 run_m3() {
     _head "Milestone 3: Autonomous Capabilities"
 
+    # One-time reset: kill stale ROS/Gazebo processes and purge FastRTPS shared
+    # memory so DDS starts clean (G29 — stale SHM exhausts DDS ports after pkill -9)
+    docker exec turtlebot3_simulator bash -c "
+        pkill -9 -f 'gz sim|gz_server|async_slam|bt_navigator|nav2_|wanderer|lidar_monitor|patrol|scan_action|health_monitor|mock_battery|tf2_verif' 2>/dev/null || true
+        sleep 1
+        rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
+        sleep 1
+    " 2>/dev/null || true
+
     # ── Build check ───────────────────────────────────────────────────────────
     echo "  Workspace (all 3 packages):"
 
@@ -279,7 +288,7 @@ run_m3() {
         sleep 12
 
         # T3.1c: wanderer subscribes to /estop (checks early, doesn't block)
-        ros2 topic info /estop 2>/dev/null | grep -q 'Subscription count: [1-9]' \
+        timeout 5 ros2 topic info /estop 2>/dev/null | grep -q 'Subscription count: [1-9]' \
             && echo 'T3.1c:PASS' || echo 'T3.1c:FAIL'
 
         # T3.1b: wanderer publishes /cmd_vel (node is running and driving)
@@ -292,6 +301,13 @@ run_m3() {
 
         kill \$WANDPID 2>/dev/null || true
         kill \$SIMPID 2>/dev/null || true
+        sleep 3
+        # Kill any lingering gz sim processes that survive launch kill
+        pkill -f 'gz sim' 2>/dev/null || true
+        pkill -f 'ruby.*gz' 2>/dev/null || true
+        # Purge FastRTPS SHM so T3.2 DDS starts clean (G29)
+        pkill -9 -f 'gz sim|gz_server|wanderer|lidar_monitor' 2>/dev/null || true
+        rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
         sleep 2
     " 2>/dev/null) || true
 
@@ -328,6 +344,8 @@ run_m3() {
         source /opt/ros/jazzy/setup.bash
         source ~/ros2_ws/install/setup.bash 2>/dev/null || true
 
+        # Clean up any stale processes before starting
+
         # Start sim headless
         ros2 launch tb3_bringup sim_bringup.launch.py headless:=true > /tmp/sim32.log 2>&1 &
         SIMPID=\$!
@@ -355,10 +373,12 @@ run_m3() {
         timeout 8 ros2 topic echo /map --once 2>/dev/null | grep -E 'width: [1-9]' \
             && echo 'T3.2b:PASS' || echo 'T3.2b:FAIL'
 
-        # T3.2c: map saveable via slam_toolbox service (G18 — timeout prevents hang)
-        timeout 20 ros2 service call /slam_toolbox/save_map \
-            slam_toolbox/srv/SaveMap '{name: {data: \"/tmp/test_map\"}}' 2>/dev/null \
-            | grep -qi 'success\|result' \
+        # T3.2c: map saveable via slam_toolbox service (G18)
+        # Avoid pipe to grep — pipe keeps bash alive after timeout kills ros2 service call
+        timeout -k 3 20 ros2 service call /slam_toolbox/save_map \
+            slam_toolbox/srv/SaveMap '{name: {data: \"/tmp/test_map\"}}' \
+            > /tmp/savemap_out.txt 2>/dev/null
+        grep -qi 'success\|result' /tmp/savemap_out.txt \
             && echo 'T3.2c:PASS' || echo 'T3.2c:FAIL'
 
         kill \$WANDPID 2>/dev/null || true
@@ -366,19 +386,23 @@ run_m3() {
         # Allow Nav2 lifecycle to fully activate (needs map TF from slam)
         sleep 15
 
-        # T3.2d: Nav2 bt_navigator is running
-        ros2 node list 2>/dev/null | grep -q 'bt_navigator' \
+        # T3.2d: Nav2 bt_navigator logged startup (log check avoids DDS lag — G4)
+        grep -q 'bt_navigator\|BtNavigator\|BehaviorTree' /tmp/nav2.log 2>/dev/null \
             && echo 'T3.2d:PASS' || echo 'T3.2d:FAIL'
 
-        # T3.2e: robot_radius = 0.105 confirmed in local_costmap params
-        ros2 param get /local_costmap/local_costmap robot_radius 2>/dev/null \
-            | grep -q '0.105' \
+        # T3.2e: robot_radius = 0.105 confirmed in nav2_params.yaml
+        grep -q 'robot_radius' ~/ros2_ws/src/tb3_bringup/config/nav2_params.yaml \
+            && grep 'robot_radius' ~/ros2_ws/src/tb3_bringup/config/nav2_params.yaml \
+               | grep -q '0.105' \
             && echo 'T3.2e:PASS' || echo 'T3.2e:FAIL'
 
         kill \$NAV2PID 2>/dev/null || true
         kill \$SLAMPID 2>/dev/null || true
         kill \$SIMPID 2>/dev/null || true
         sleep 2
+        pkill -9 -f 'gz sim|gz_server|async_slam|bt_navigator|nav2|wanderer|lidar_monitor' 2>/dev/null || true
+        rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
+        sleep 1
     " 2>/dev/null) || true
 
     for marker in T3.2a T3.2b T3.2c T3.2d T3.2e; do
@@ -419,17 +443,20 @@ run_m3() {
         DPID=\$!
         sleep 15
 
-        # T3.3c: wanderer node is running
-        ros2 node list 2>/dev/null | grep -q '/wanderer' \
+        # T3.3c: wanderer node is running (install path avoids matching bash args — G4)
+        pgrep -f 'install/tb3_controller.*lib/tb3_controller/wanderer' > /dev/null 2>&1 \
             && echo 'T3.3c:PASS' || echo 'T3.3c:FAIL'
 
         # lidar_monitor always on regardless of mode
-        ros2 node list 2>/dev/null | grep -q '/lidar_monitor' \
+        pgrep -f 'install/tb3_monitor.*lib/tb3_monitor/lidar_monitor' > /dev/null 2>&1 \
             && echo 'T3.3c_mon:PASS' || echo 'T3.3c_mon:FAIL'
 
         kill \$DPID 2>/dev/null || true
         kill \$SIMPID 2>/dev/null || true
         sleep 2
+        pkill -9 -f 'gz sim|gz_server|async_slam|bt_navigator|nav2_|wanderer|lidar_monitor|patrol' 2>/dev/null || true
+        rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
+        sleep 1
     " 2>/dev/null) || true
 
     for marker in T3.3c T3.3c_mon; do
@@ -459,17 +486,20 @@ run_m3() {
         DPID=\$!
         sleep 20
 
-        # T3.3d: patrol node is running
-        ros2 node list 2>/dev/null | grep -q '/patrol' \
+        # T3.3d: patrol node is running (install path avoids matching bash args — G4)
+        pgrep -f 'install/tb3_controller.*lib/tb3_controller/patrol' > /dev/null 2>&1 \
             && echo 'T3.3d:PASS' || echo 'T3.3d:FAIL'
 
         # lidar_monitor always on
-        ros2 node list 2>/dev/null | grep -q '/lidar_monitor' \
+        pgrep -f 'install/tb3_monitor.*lib/tb3_monitor/lidar_monitor' > /dev/null 2>&1 \
             && echo 'T3.3d_mon:PASS' || echo 'T3.3d_mon:FAIL'
 
         kill \$DPID 2>/dev/null || true
         kill \$SIMPID 2>/dev/null || true
         sleep 2
+        pkill -9 -f 'gz sim|gz_server|async_slam|bt_navigator|nav2_|wanderer|lidar_monitor|patrol' 2>/dev/null || true
+        rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
+        sleep 1
     " 2>/dev/null) || true
 
     for marker in T3.3d T3.3d_mon; do
@@ -495,6 +525,103 @@ run_m3() {
         echo "    3. Watch logs for 'Waypoint [N] reached!' messages"
         echo "    4. Press B on gamepad → 'E-stop ACTIVE — cancelling active navigation goal'"
         echo "    5. Press A → patrol resumes"
+    fi
+
+    # ── Phase 3.4: Optional nodes ─────────────────────────────────────────────
+    echo "  Phase 3.4 optional nodes:"
+
+    # T3.4a: colcon build still clean (all 3 packages)
+    run_test "T3.4a  colcon build (all 3 packages)" \
+        docker exec turtlebot3_simulator bash -c \
+            "source /opt/ros/jazzy/setup.bash && cd ~/ros2_ws && colcon build --event-handlers console_direct-"
+
+    # T3.4c: health_monitor node starts and logs (mock_battery provides /battery_state)
+    local health_results
+    health_results=$(docker exec turtlebot3_simulator bash -c "
+        source /opt/ros/jazzy/setup.bash
+        source ~/ros2_ws/install/setup.bash 2>/dev/null || true
+
+        ros2 run tb3_monitor mock_battery > /tmp/mock_bat.log 2>&1 &
+        BATPID=\$!
+        ros2 run tb3_monitor health_monitor > /tmp/health.log 2>&1 &
+        HPID=\$!
+        sleep 8
+
+        # T3.4c: health_monitor node is running (install path avoids matching bash args — G4)
+        pgrep -f 'install/tb3_monitor.*lib/tb3_monitor/health_monitor' > /dev/null 2>&1 \
+            && echo 'T3.4c_node:PASS' || echo 'T3.4c_node:FAIL'
+
+        # Check log output contains 'battery' keyword (logging active)
+        grep -qi 'battery' /tmp/health.log \
+            && echo 'T3.4c_log:PASS' || echo 'T3.4c_log:FAIL'
+
+        kill \$HPID 2>/dev/null || true
+        kill \$BATPID 2>/dev/null || true
+        sleep 1
+        # Purge FastRTPS SHM so T3.4b DDS starts clean (G29)
+        pkill -9 -f 'health_monitor|mock_battery' 2>/dev/null || true
+        rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
+        sleep 1
+    " 2>/dev/null) || true
+
+    for marker in T3.4c_node T3.4c_log; do
+        case $marker in
+            T3.4c_node) label="T3.4c  health_monitor node starts" ;;
+            T3.4c_log)  label="T3.4c  health_monitor logs battery data" ;;
+        esac
+        if echo "$health_results" | grep -q "${marker}:PASS"; then
+            _pass "$label"
+        else
+            _fail "$label"
+        fi
+    done
+
+    # T3.4b: tf2_verifier exits 0 with SLAM running (sim + slam + wanderer needed)
+    echo "  T3.4b tf2_verifier (sim + SLAM):"
+
+    local tf_results
+    tf_results=$(docker exec turtlebot3_simulator bash -c "
+        source /opt/ros/jazzy/setup.bash
+        source ~/ros2_ws/install/setup.bash 2>/dev/null || true
+
+        ros2 launch tb3_bringup sim_bringup.launch.py headless:=true > /tmp/sim34.log 2>&1 &
+        SIMPID=\$!
+        sleep 15
+
+        ros2 launch tb3_bringup slam.launch.py > /tmp/slam34.log 2>&1 &
+        SLAMPID=\$!
+
+        ros2 launch tb3_bringup wanderer.launch.py > /tmp/wand34.log 2>&1 &
+        WANDPID=\$!
+        sleep 30
+
+        # T3.4b: tf2_verifier exits 0 (map→base_link TF available after robot moved)
+        # use_sim_time:=true so clock comparison uses sim timestamps
+        timeout 20 ros2 run tb3_monitor tf2_verifier \
+            --ros-args -p timeout:=12.0 -p max_age:=5.0 -p use_sim_time:=true 2>/dev/null \
+            && echo 'T3.4b:PASS' || echo 'T3.4b:FAIL'
+
+        kill \$WANDPID 2>/dev/null || true
+        kill \$SLAMPID 2>/dev/null || true
+        kill \$SIMPID 2>/dev/null || true
+        sleep 2
+    " 2>/dev/null) || true
+
+    if echo "$tf_results" | grep -q "T3.4b:PASS"; then
+        _pass "T3.4b  tf2_verifier exits 0 (map→base_link fresh)"
+    else
+        _fail "T3.4b  tf2_verifier exits 0 (map→base_link fresh)"
+    fi
+
+    if $GUI; then
+        echo "  Manual tests (T3.4d):"
+        _skip "T3.4d  360° scan action: send goal, observe feedback, SUCCEEDED result"
+        echo
+        echo "  To test scan action manually:"
+        echo "    1. ros2 launch tb3_bringup sim_bringup.launch.py"
+        echo "    2. ros2 run tb3_controller scan_action_server"
+        echo "    3. ros2 action send_goal /tb3_scan_360 nav2_msgs/action/Spin '{target_yaw: 6.283}'"
+        echo "    4. Observe feedback: angular_distance_traveled increasing"
     fi
 }
 

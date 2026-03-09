@@ -12,7 +12,7 @@
 **Key References**:
 * Requirements: `input/my-vision.md`
 * Specification: `docs/specification.md` — FR-IDs, G-IDs, test-gate categories
-* Gotchas: `.claude/rules/gotchas.md` — 28 pitfalls (G1–G21 original + G22–G23 added during M1 + G24–G26 added during M2 + G27–G28 added during Phase 3.2)
+* Gotchas: `.claude/rules/gotchas.md` — 29 pitfalls (G1–G21 original + G22–G23 added during M1 + G24–G26 added during M2 + G27–G28 added during Phase 3.2 + G29 added during Phase 3.4)
 * Skills: `.claude/skills/` — 7 ROS 2 domain skills
 
 ---
@@ -358,8 +358,8 @@ These must be investigated before or during the indicated phase. Record results 
 
 | Field | Value |
 |---|---|
-| **Status** | `NOT STARTED` |
-| **Completed** | — |
+| **Status** | `COMPLETE` |
+| **Completed** | 2026-03-09 |
 | **Complexity** | Small-Medium |
 | **Depends on** | Phase 3.3 |
 | **Spec refs** | FR-3.7, FR-3.8, FR-3.9 (all optional) |
@@ -565,6 +565,9 @@ Record all technical decisions made during execution.
 | 2026-03-08 | 3.2 | `async_slam_toolbox_node` is a lifecycle node — must use slam_toolbox's online_async_launch.py | Direct `Node()` spawn leaves it unconfigured; no /scan sub, no /map pub; lifecycle autostart handles CONFIGURE→ACTIVATE |
 | 2026-03-08 | 3.2 | Nav2 launched via nav2_bringup/navigation_launch.py (no AMCL/map_server) | slam_toolbox provides map→odom TF and /map; bringup_launch.py adds AMCL which conflicts |
 | 2026-03-08 | 3.2 | ros2 service call needs `timeout 20` prefix in scripts | Without timeout, call blocks indefinitely if service is unavailable (e.g., SLAM not yet active) |
+| 2026-03-09 | 3.4 | G29: stale FastRTPS SHM exhausts DDS ports after pkill -9 | Orphaned /dev/shm/fastrtps_* files from killed nodes consume all DDS ports; always run `rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_*` after pkill in test scripts |
+| 2026-03-09 | 3.4 | tf2_verifier uses wall clock (time.monotonic) for timeout, not sim clock | With use_sim_time:=true, get_clock().now() returns 0 before first /clock; sim time then jumps past deadline → immediate timeout; wall clock avoids this |
+| 2026-03-09 | 3.4 | pgrep -f node checks use install-path patterns to avoid bash self-match | pgrep -f 'wanderer_node' inside a bash -c script matches the bash process itself; patterns like 'install/tb3_controller.*lib/tb3_controller/wanderer' are unique to the installed binary |
 
 ---
 
@@ -575,6 +578,7 @@ Record all modifications to this plan.
 | Date | Change | Reason |
 |---|---|---|
 | 2026-03-07 | v1.0 — initial plan created | Generated from specification via Claude Code |
+| 2026-03-09 | Phase 3.4 complete; all 20/20 m3 tests pass | health_monitor, tf2_verifier, scan_action_server, mock_battery; user-guide-milestone-3.md; G29 + pgrep/wall-clock fixes |
 | 2026-03-08 | Phase 3.2 complete; T3.2a-e pass; slam_toolbox + Nav2 operational | slam_params.yaml, nav2_params.yaml, slam.launch.py, nav2.launch.py; lifecycle autostart; save_map service verified |
 | 2026-03-08 | Phase 3.1 complete; T3.1a/b/c/d pass; 6/6 run_tests.sh m3 pass | lidar_monitor + wanderer; 40 unit tests; DDS discovery delay fixed (sleep 12s) |
 | 2026-03-08 | Milestone 2 complete (phases 2.1–2.3); all test-gates pass | Gamepad control, e-stop, restart, Y-shutdown all verified manually |
@@ -706,10 +710,10 @@ All files to be created, grouped by the phase that creates them.
 * [x] `src/tb3_controller/test/test_patrol_logic.py`
 
 ### Phase 3.4
-* [ ] `src/tb3_monitor/tb3_monitor/health_monitor_node.py` (optional)
-* [ ] `src/tb3_monitor/tb3_monitor/tf2_verifier.py` (optional)
-* [ ] `src/tb3_controller/tb3_controller/scan_action_server.py` (optional)
-* [ ] `docs/user-guide-milestone-3.md`
+* [x] `src/tb3_monitor/tb3_monitor/health_monitor_node.py`
+* [x] `src/tb3_monitor/tb3_monitor/tf2_verifier.py`
+* [x] `src/tb3_controller/tb3_controller/scan_action_server.py`
+* [x] `docs/user-guide-milestone-3.md`
 
 ### Phase 4.1
 * [ ] `scripts/tmux_dashboard.sh`

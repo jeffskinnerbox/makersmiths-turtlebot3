@@ -23,6 +23,7 @@ setup(
             'gamepad_manager = tb3_controller.gamepad_manager_node:main',
             'wanderer = tb3_controller.wanderer_node:main',
             'patrol = tb3_controller.patrol_node:main',
+            'scan_action_server = tb3_controller.scan_action_server:main',
         ],
     },
 )

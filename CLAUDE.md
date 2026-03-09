@@ -16,20 +16,20 @@ Both containers use `network_mode: host`, Fast-DDS (`rmw_fastrtps_cpp`), and `GZ
 
 ## Current Project State
 
-**Phases 3.1 + 3.2 complete** (2026-03-08). SLAM + Nav2 operational in simulation.
+**Milestone 3 complete** (2026-03-09). All 20/20 m3 tests pass. SLAM + Nav2 + patrol + health monitoring operational in simulation.
 
 **What exists**:
 - `docker/` — Dockerfile.simulator, Dockerfile.turtlebot, docker-compose.yaml
 - `scripts/` — build.sh, run_docker.sh, attach_terminal.sh, workspace.sh, run_tests.sh
 - `entrypoint.sh`, `.colcon/defaults.yaml`
-- `src/tb3_bringup/` — ament_python: worlds, config (bridge, teleop, slam, nav2), launch files, tests
-- `src/tb3_controller/` — ament_python: `gamepad_manager_node.py`, `wanderer_node.py`, unit tests
-- `src/tb3_monitor/` — ament_python: `lidar_monitor_node.py`, unit tests
-- `docs/` — specification, development plan, user-guide-milestone-1, user-guide-milestone-2
+- `src/tb3_bringup/` — ament_python: worlds, config (bridge, teleop, slam, nav2), launch files (incl. capability_demo), tests
+- `src/tb3_controller/` — ament_python: `gamepad_manager_node.py`, `wanderer_node.py`, `patrol_node.py`, `scan_action_server.py`, unit tests
+- `src/tb3_monitor/` — ament_python: `lidar_monitor_node.py`, `health_monitor_node.py`, `tf2_verifier.py`, `mock_battery.py`, unit tests
+- `docs/` — specification, development plan, user-guide-milestone-1, user-guide-milestone-2, user-guide-milestone-3
 - `.claude/skills/` — ROS 2 domain skills
-- `.claude/rules/` — `gotchas.md` (28 known pitfalls, G1–G28) and `git-commit.md`
+- `.claude/rules/` — `gotchas.md` (29 known pitfalls, G1–G29) and `git-commit.md`
 
-**Next step**: Phase 3.3 — Patrol Node + `capability_demo.launch.py`.
+**Next step**: Phase 4.1 — TMUX Monitoring Dashboard.
 
 **Package build order**: `tb3_monitor` → `tb3_controller` → `tb3_bringup` (tb3_monitor has no in-project deps; tb3_bringup launch files reference both).
 
@@ -98,6 +98,8 @@ ros2 launch tb3_bringup sim_bringup.launch.py headless:=true  # headless (no GUI
 ros2 launch tb3_bringup wanderer.launch.py    # lidar_monitor + wanderer
 ros2 launch tb3_bringup slam.launch.py        # slam_toolbox online_async → /map
 ros2 launch tb3_bringup nav2.launch.py        # Nav2 stack (needs slam for map→odom TF)
+ros2 launch tb3_bringup capability_demo.launch.py            # patrol mode (default)
+ros2 launch tb3_bringup capability_demo.launch.py mode:=wanderer  # wanderer mode
 
 # Run tests — subcommands: m1, m2, m3, all (headless by default)
 bash scripts/run_tests.sh all            # all milestones, headless
@@ -129,12 +131,14 @@ turtlebot3/
 │   │   ├── worlds/tb3_warehouse.world   # turtlebot3_world env + TB3 embedded
 │   │   ├── worlds/tb3_house.world       # turtlebot3_house env + TB3 embedded
 │   │   └── launch/sim_bringup.launch.py, sim_house.launch.py, teleop.launch.py,
-│   │           gamepad.launch.py, wanderer.launch.py, slam.launch.py, nav2.launch.py
-│   ├── tb3_controller/             # Gamepad manager + wanderer (ament_python)
-│   │                               # M2: gamepad_manager_node; M3: wanderer_node
-│   │                               # patrol_node added in Phase 3.3
-│   └── tb3_monitor/                # LiDAR monitor (ament_python) — Phase 3.1
-│                                   # lidar_monitor_node: /scan → /closest_obstacle
+│   │           gamepad.launch.py, wanderer.launch.py, slam.launch.py, nav2.launch.py,
+│   │           capability_demo.launch.py
+│   ├── tb3_controller/             # Gamepad manager + autonomous behaviors (ament_python)
+│   │                               # M2: gamepad_manager_node
+│   │                               # M3: wanderer_node, patrol_node, scan_action_server
+│   └── tb3_monitor/                # Monitoring nodes (ament_python)
+│                                   # M3: lidar_monitor_node, health_monitor_node,
+│                                   #     tf2_verifier, mock_battery
 ├── docs/                           # spec, dev plan, user guides
 └── input/                          # vision, prompts, methodology
 ```
@@ -154,5 +158,5 @@ turtlebot3/
 - **Requirements**: `input/my-vision.md`
 - **Specification**: `docs/specification.md` — full system architecture, ROS interfaces table, tf2 frame tree, gotcha cross-references (G1-G26), package specs, and all 5 milestone definitions
 - **Development Plan**: `docs/development-plan.md` — living document; phase status, decisions log, change log
-- **Gotchas**: `.claude/rules/gotchas.md` — 28 proven pitfalls with workarounds
+- **Gotchas**: `.claude/rules/gotchas.md` — 29 proven pitfalls with workarounds (G29: stale FastRTPS SHM)
 - **Methodology**: `input/README.md` — document-driven workflow diagram
