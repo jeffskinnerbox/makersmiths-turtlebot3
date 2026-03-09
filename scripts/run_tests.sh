@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # run_tests.sh — TurtleBot3 test runner
-# Usage: bash scripts/run_tests.sh [m1|m2|m3|all] [--gui]
+# Usage: bash scripts/run_tests.sh [m1|m2|m3|m4|all] [--gui]
 #
 # Subcommands: m1  Milestone 1 (Docker simulation environment)
-#              m2  Milestone 2 (Gamepad control) — TODO
-#              m3  Milestone 3 (Autonomous capabilities) — TODO
+#              m2  Milestone 2 (Gamepad control)
+#              m3  Milestone 3 (Autonomous capabilities)
+#              m4  Milestone 4 (TMUX monitoring dashboard)
 #              all Run all available milestones (default)
 #
 # Flags: --gui  Enable GUI tests (requires xhost +local:docker; some tests are manual)
@@ -25,7 +26,7 @@ GUI=false
 
 for arg in "$@"; do
     case $arg in
-        m1|m2|m3|all) MILESTONE=$arg ;;
+        m1|m2|m3|m4|all) MILESTONE=$arg ;;
         --gui) GUI=true ;;
         -h|--help)
             sed -n '2,10p' "$0" | sed 's/^# \?//'
@@ -625,6 +626,59 @@ run_m3() {
     fi
 }
 
+# ── Milestone 4 ───────────────────────────────────────────────────────────────
+run_m4() {
+    _head "Milestone 4: TMUX Monitoring Dashboard"
+
+    # Container must be running; tests are static if it isn't
+    if ! docker inspect -f '{{.State.Running}}' turtlebot3_simulator 2>/dev/null \
+            | grep -q '^true$'; then
+        _skip "T4.1a  container not running — skipping M4 tests"
+        _skip "T4.1c  container not running — skipping M4 tests"
+        _skip "T4.1d  container not running — skipping M4 tests"
+        return
+    fi
+
+    # Clean slate: kill any pre-existing session
+    docker exec turtlebot3_simulator tmux kill-session -t tb3_monitor 2>/dev/null || true
+
+    echo "  Dashboard:"
+
+    # T4.1a + T4.1d: create session, check 5+ panes and session name
+    run_test "T4.1a  dashboard creates 5+ panes" bash -c "
+        bash scripts/tmux_dashboard.sh --no-attach > /tmp/dash_out.txt 2>&1 &&
+        pane_count=\$(docker exec turtlebot3_simulator tmux list-panes -t tb3_monitor 2>/dev/null | wc -l) &&
+        [ \"\$pane_count\" -ge 5 ]
+    "
+
+    run_test "T4.1d  session name is 'tb3_monitor'" bash -c "
+        docker exec turtlebot3_simulator tmux list-sessions 2>/dev/null | grep -q '^tb3_monitor:'
+    "
+
+    # T4.1c: re-run must not create a duplicate session
+    run_test "T4.1c  re-run does not duplicate session" bash -c "
+        bash scripts/tmux_dashboard.sh --no-attach > /dev/null 2>&1
+        session_count=\$(docker exec turtlebot3_simulator tmux list-sessions 2>/dev/null | grep -c '^tb3_monitor:')
+        [ \"\$session_count\" -eq 1 ]
+    "
+
+    # Clean up
+    docker exec turtlebot3_simulator tmux kill-session -t tb3_monitor 2>/dev/null || true
+
+    if $GUI; then
+        echo "  Manual tests:"
+        _skip "T4.1b  /cmd_vel pane shows Twist messages when robot is driven"
+        echo
+        echo "  To verify T4.1b:"
+        echo "    1. sg docker -c \"bash scripts/run_docker.sh\""
+        echo "    2. bash scripts/tmux_dashboard.sh"
+        echo "    3. (new terminal) bash scripts/attach_terminal.sh turtlebot3_simulator"
+        echo "    4. ros2 launch tb3_bringup sim_bringup.launch.py"
+        echo "    5. ros2 launch tb3_bringup wanderer.launch.py"
+        echo "    6. Confirm /cmd_vel pane shows Twist messages"
+    fi
+}
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 echo -e "${BLUE}══════════════════════════════════════════${NC}"
 echo -e "${BLUE}  TurtleBot3 Test Runner${NC}"
@@ -636,7 +690,8 @@ case $MILESTONE in
     m1)  run_m1 ;;
     m2)  run_m2 ;;
     m3)  run_m3 ;;
-    all) run_m1; run_m2; run_m3 ;;
+    m4)  run_m4 ;;
+    all) run_m1; run_m2; run_m3; run_m4 ;;
 esac
 
 # ── Summary ───────────────────────────────────────────────────────────────────

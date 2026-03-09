@@ -16,20 +16,7 @@ Both containers use `network_mode: host`, Fast-DDS (`rmw_fastrtps_cpp`), and `GZ
 
 ## Current Project State
 
-**Milestone 3 complete** (2026-03-09). All 20/20 m3 tests pass. SLAM + Nav2 + patrol + health monitoring operational in simulation.
-
-**What exists**:
-- `docker/` — Dockerfile.simulator, Dockerfile.turtlebot, docker-compose.yaml
-- `scripts/` — build.sh, run_docker.sh, attach_terminal.sh, workspace.sh, run_tests.sh
-- `entrypoint.sh`, `.colcon/defaults.yaml`
-- `src/tb3_bringup/` — ament_python: worlds, config (bridge, teleop, slam, nav2), launch files (incl. capability_demo), tests
-- `src/tb3_controller/` — ament_python: `gamepad_manager_node.py`, `wanderer_node.py`, `patrol_node.py`, `scan_action_server.py`, unit tests
-- `src/tb3_monitor/` — ament_python: `lidar_monitor_node.py`, `health_monitor_node.py`, `tf2_verifier.py`, `mock_battery.py`, unit tests
-- `docs/` — specification, development plan, user-guide-milestone-1, user-guide-milestone-2, user-guide-milestone-3
-- `.claude/skills/` — ROS 2 domain skills
-- `.claude/rules/` — `gotchas.md` (29 known pitfalls, G1–G29) and `git-commit.md`
-
-**Next step**: Phase 4.1 — TMUX Monitoring Dashboard.
+**Next step**: see `docs/development-plan.md` for current phase and status.
 
 **Package build order**: `tb3_monitor` → `tb3_controller` → `tb3_bringup` (tb3_monitor has no in-project deps; tb3_bringup launch files reference both).
 
@@ -90,9 +77,10 @@ source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
 cd ~/ros2_ws && colcon build
 
 # Run a single pytest test file (no ROS running needed for unit tests)
+# NOTE: run these inside the container (docker exec), not on the host
 python3 -m pytest src/tb3_controller/test/test_wanderer_logic.py -q --tb=short
 
-# Run a single named test
+# Run a single named test (test files live at src/<pkg>/test/test_*.py)
 python3 -m pytest src/tb3_monitor/test/ -q -k 'test_min_distance'
 
 # colcon uses symlink-install (.colcon/defaults.yaml): Python *.py node files are
@@ -159,7 +147,9 @@ turtlebot3/
 │   │                               # M3: wanderer_node, patrol_node, scan_action_server
 │   └── tb3_monitor/                # Monitoring nodes (ament_python)
 │                                   # M3: lidar_monitor_node, health_monitor_node,
-│                                   #     tf2_verifier, mock_battery
+│                                   #     mock_battery (simulates /battery_state),
+│                                   #     tf2_verifier (debug/test tool — verifies TF2
+│                                   #       frame connectivity, not a production node)
 ├── docs/                           # spec, dev plan, user guides
 └── input/                          # vision, prompts, methodology
 ```

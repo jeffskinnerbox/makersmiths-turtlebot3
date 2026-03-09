@@ -388,8 +388,8 @@ These must be investigated before or during the indicated phase. Record results 
 
 | Field | Value |
 |---|---|
-| **Status** | `NOT STARTED` |
-| **Completed** | — |
+| **Status** | `COMPLETE` |
+| **Completed** | 2026-03-09 |
 | **Complexity** | Small |
 | **Depends on** | Phase 3.4 (all monitoring topics must exist) |
 | **Spec refs** | FR-4.1 through FR-4.5 |
@@ -568,6 +568,7 @@ Record all technical decisions made during execution.
 | 2026-03-09 | 3.4 | G29: stale FastRTPS SHM exhausts DDS ports after pkill -9 | Orphaned /dev/shm/fastrtps_* files from killed nodes consume all DDS ports; always run `rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_*` after pkill in test scripts |
 | 2026-03-09 | 3.4 | tf2_verifier uses wall clock (time.monotonic) for timeout, not sim clock | With use_sim_time:=true, get_clock().now() returns 0 before first /clock; sim time then jumps past deadline → immediate timeout; wall clock avoids this |
 | 2026-03-09 | 3.4 | pgrep -f node checks use install-path patterns to avoid bash self-match | pgrep -f 'wanderer_node' inside a bash -c script matches the bash process itself; patterns like 'install/tb3_controller.*lib/tb3_controller/wanderer' are unique to the installed binary |
+| 2026-03-09 | 4.1 | D7: pure tmux script (no tmuxinator) | tmux already installed in Dockerfile.simulator; no extra dep needed; container was not running to verify tmuxinator |
 
 ---
 
@@ -577,6 +578,7 @@ Record all modifications to this plan.
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-03-09 | Phase 4.1 complete; T4.1a/c/d automated; T4.1b manual | tmux_dashboard.sh (5-pane, idempotent); run_tests.sh m4; user-guide-milestone-4.md |
 | 2026-03-07 | v1.0 — initial plan created | Generated from specification via Claude Code |
 | 2026-03-09 | Phase 3.4 complete; all 20/20 m3 tests pass | health_monitor, tf2_verifier, scan_action_server, mock_battery; user-guide-milestone-3.md; G29 + pgrep/wall-clock fixes |
 | 2026-03-08 | Phase 3.2 complete; T3.2a-e pass; slam_toolbox + Nav2 operational | slam_params.yaml, nav2_params.yaml, slam.launch.py, nav2.launch.py; lifecycle autostart; save_map service verified |
@@ -716,8 +718,8 @@ All files to be created, grouped by the phase that creates them.
 * [x] `docs/user-guide-milestone-3.md`
 
 ### Phase 4.1
-* [ ] `scripts/tmux_dashboard.sh`
-* [ ] `docs/user-guide-milestone-4.md`
+* [x] `scripts/tmux_dashboard.sh`
+* [x] `docs/user-guide-milestone-4.md`
 
 ### Phase 5.1
 * [ ] Updated `docker/Dockerfile.turtlebot` (arm64 variant)
