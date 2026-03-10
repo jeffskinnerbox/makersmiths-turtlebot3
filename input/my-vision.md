@@ -69,7 +69,7 @@ I envision the following major milestone within this phased plan:
    No need to execute previous test-gates.
    When completed, create a user guide document (called `user-guide-milestone-4.md`)
    written so all tests can be manually repeated.
-1. **5th Milestone:** The turtlebot container should to be moved to the Raspberry Pi 4 on the TurtleBot3.
+1. **5th Milestone:** The turtlebot container should be moved to the Raspberry Pi 4 on the TurtleBot3.
    The Raspberry Pi needs to have Ubuntu 24.04 installed, followed by Docker, and the turtlebot container.
    The simulator container should be installed on another Ubuntu 24.04 system, called NucBoxM6,
    along with the F310 Gamepad.

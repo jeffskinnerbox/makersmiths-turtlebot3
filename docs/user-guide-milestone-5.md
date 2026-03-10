@@ -36,6 +36,7 @@ bridges the two machines (see [DDS Discovery](#dds-discovery-over-wifi) below).
    — choose the 64-bit (arm64) image.
 
 2. Flash to microSD (≥32 GB, Class 10) using Raspberry Pi Imager or `dd`:
+
    ```bash
    # On host — replace /dev/sdX with your SD card device
    xzcat ubuntu-24.04-preinstalled-server-arm64+raspi.img.xz | sudo dd of=/dev/sdX bs=4M status=progress
@@ -44,6 +45,7 @@ bridges the two machines (see [DDS Discovery](#dds-discovery-over-wifi) below).
 
 3. Before first boot, mount the SD `system-boot` partition and edit `network-config`
    to pre-configure WiFi (cloud-init format):
+
    ```yaml
    version: 2
    wifis:
@@ -58,12 +60,14 @@ bridges the two machines (see [DDS Discovery](#dds-discovery-over-wifi) below).
 4. Insert SD, power on RPi. Wait ~2 min for first-boot cloud-init to finish.
 
 5. Find RPi IP via router admin (`192.168.8.1` → DHCP leases) or:
+
    ```bash
    # From NucBoxM6 on same WiFi
    nmap -sn 192.168.8.0/24 | grep -A2 'Raspberry'
    ```
 
 6. SSH in (default user `ubuntu`, password `ubuntu` — you'll be forced to change it):
+
    ```bash
    ssh ubuntu@<RPI_IP>
    ```
@@ -112,6 +116,7 @@ docker build -f docker/Dockerfile.turtlebot -t turtlebot3_robot .
 > **R5 — Memory**: RPi 4 (4 GB) is tight. Monitor during build:
 > `watch -n 5 free -h`
 > If OOM, add a 2 GB swapfile:
+>
 > ```bash
 > sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
 > sudo mkswap /swapfile && sudo swapon /swapfile
@@ -121,6 +126,7 @@ docker build -f docker/Dockerfile.turtlebot -t turtlebot3_robot .
 **Test-gate T5.1a**: `docker build` exits 0 — container builds successfully on RPi.
 
 **Test-gate T5.1b/c**: Run inside the built container:
+
 ```bash
 docker run --rm turtlebot3_robot which ros2
 docker run --rm turtlebot3_robot bash -c \
@@ -142,6 +148,7 @@ docker run --rm turtlebot3_robot bash -c \
    - RPi 4: e.g., `192.168.8.20`
 
 Verify connectivity:
+
 ```bash
 # From NucBoxM6
 ping 192.168.8.20   # should reach RPi
@@ -165,6 +172,7 @@ Fast-DDS default discovery uses UDP multicast (`239.255.0.1:7400`). If the GL-AX
 passes multicast between clients (most consumer routers do), this works with no extra config.
 
 **Test-gate T5.1d**:
+
 ```bash
 # On RPi — start turtlebot container
 docker run -d --network host --name turtlebot3_robot \
@@ -205,12 +213,14 @@ docker exec turtlebot3_simulator bash -c \
 **Step 2 — Set `ROS_DISCOVERY_SERVER` on both machines** before starting ROS nodes:
 
 On NucBoxM6 `docker-compose.yaml` (simulator service environment):
+
 ```yaml
 environment:
   ROS_DISCOVERY_SERVER: "192.168.8.10:11811"
 ```
 
 On RPi, run the container with the env var:
+
 ```bash
 docker run -d --network host --name turtlebot3_robot \
     -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
@@ -224,6 +234,7 @@ docker run -d --network host --name turtlebot3_robot \
 > The discovery server process must be running before any nodes start.
 
 **Step 3 — Verify**:
+
 ```bash
 # On NucBoxM6
 docker exec turtlebot3_simulator bash -c \
@@ -242,6 +253,7 @@ docker exec turtlebot3_simulator bash -c \
 Once DDS discovery works (T5.1d passes):
 
 **Terminal 1 — NucBoxM6: start simulation and dashboard**
+
 ```bash
 sg docker -c "bash scripts/run_docker.sh"
 bash scripts/attach_terminal.sh turtlebot3_simulator
@@ -250,6 +262,7 @@ ros2 launch tb3_bringup sim_bringup.launch.py headless:=true
 ```
 
 **Terminal 2 — NucBoxM6: gamepad**
+
 ```bash
 bash scripts/attach_terminal.sh turtlebot3_simulator
 source /opt/ros/jazzy/setup.bash && source ~/ros2_ws/install/setup.bash
@@ -257,6 +270,7 @@ ros2 launch tb3_bringup gamepad.launch.py
 ```
 
 **Terminal 3 — NucBoxM6: dashboard**
+
 ```bash
 bash scripts/tmux_dashboard.sh
 ```
@@ -289,17 +303,20 @@ Monitor with `watch -n 2 'free -h && docker stats --no-stream'` during build.
 **Robot doesn't move when gamepad pressed**
 
 Confirm `/cmd_vel` is published on NucBoxM6 and bridged to RPi:
+
 ```bash
 # On NucBoxM6
 docker exec turtlebot3_simulator bash -c \
     "source /opt/ros/jazzy/setup.bash && ros2 topic echo /cmd_vel"
 ```
+
 If no data: check gamepad launch (e-stop may be active — press A to clear).
 If data present but robot silent: check DDS discovery (T5.1d).
 
 **`/scan` shows no data on NucBoxM6**
 
 The LiDAR driver runs inside the RPi container. Verify it's running:
+
 ```bash
 # On RPi
 docker exec turtlebot3_robot bash -c \

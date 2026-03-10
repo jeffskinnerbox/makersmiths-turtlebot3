@@ -12,7 +12,7 @@ description: >
 
 When you need documentation for a library or API, fetch it with the `chub` CLI
 rather than guessing from training data. This gives you the current, correct API.
-Skill file found [here](https://github.com/andrewyng/context-hub/blob/main/cli/skills/get-api-docs/SKILL.md).
+Here is [documentation][01] and [Skill file][02].
 
 To install [Context Hub](https://github.com/andrewyng/context-hub) (`chub` for short) using `npm`,
 and run it to get a sense of its output:
@@ -92,3 +92,9 @@ Available labels: `outdated`, `inaccurate`, `incomplete`, `wrong-examples`,
 - `chub search` with no query lists everything available
 - IDs are `<author>/<name>` — confirm the ID from search before fetching
 - If multiple languages exist and you don't pass `--lang`, chub will tell you which are available
+
+
+
+[01]:https://www.marktechpost.com/2026/03/09/andrew-ngs-team-releases-context-hub-an-open-source-tool-that-gives-your-coding-agent-the-up-to-date-api-documentation-it-needs/
+[02]:https://github.com/andrewyng/context-hub/blob/main/cli/skills/get-api-docs/SKILL.md
+
