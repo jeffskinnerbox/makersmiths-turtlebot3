@@ -21,6 +21,20 @@ no robot hardware required.
 * [Forest3D](https://github.com/unitsSpaceLab/Forest3D/tree/main) is a comprehensive toolkit that generates realistic forest environments for Gazebo robotics simulation
   by processing Blender assets and DEM terrain data through automated procedural placement algorithms.
 
+## Creating Architecture Diagrams
+
+Claude Code Prompt
+
+```text
+Analyze this codebase and produce:
+1. A Mermaid architecture diagram showing the main components and how they interact
+2. A JSON summary with a one-line description of each component
+
+Format the output as:
+- A ```mermaid code block for the diagram
+- A ```json code block for the component summaries
+```
+
 
 
 [01]:https://hub.docker.com/r/robotis/turtlebot3/tags
