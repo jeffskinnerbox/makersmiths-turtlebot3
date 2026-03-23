@@ -17,7 +17,7 @@
 docs/*.pdf
 
 # --- Photos (large binaries, not needed in repo) ---
-pictures/
+pictures/20260129_*.jpg
 
 # --- ROS 2 Build Artifacts ---
 build/
